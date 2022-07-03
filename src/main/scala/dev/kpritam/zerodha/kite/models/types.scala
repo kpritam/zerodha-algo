@@ -1,4 +1,4 @@
-package dev.kpritam.kite.models
+package dev.kpritam.zerodha.kite.models
 
 opaque type Exchange = String
 object Exchange:
