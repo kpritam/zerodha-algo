@@ -3,7 +3,7 @@ package dev.kpritam.zerodha
 import com.zerodhatech.kiteconnect.KiteConnect
 import dev.kpritam.zerodha.kite.{KiteClient, KiteConfig, KiteService}
 import dev.kpritam.zerodha.kite.login.{KiteLogin, Totp}
-import dev.kpritam.zerodha.kite.models.Exchange
+import dev.kpritam.zerodha.kite.models.{Exchange, InstrumentRequest}
 import dev.kpritam.zerodha.time.nextWeekday
 import zio.*
 
@@ -14,10 +14,11 @@ import javax.crypto.KeyGenerator
 import javax.crypto.spec.SecretKeySpec
 import sttp.client3.*
 
-val nfo       = Exchange("NFO")
-val nifty     = "NIFTY"
-val expiryDay = nextWeekday(Calendar.THURSDAY)
-val price     = 12
+val nfo               = Exchange("NFO")
+val nifty             = "NIFTY"
+val expiryDay         = nextWeekday(Calendar.THURSDAY)
+val instrumentRequest = InstrumentRequest(nfo, nifty, expiryDay)
+val price             = 12
 
 object App extends ZIOAppDefault:
   private val kiteConnectLive = ZLayer.fromFunction((cfg: KiteConfig) => KiteConnect(cfg.apiKey))
@@ -44,6 +45,6 @@ object App extends ZIOAppDefault:
       requestToken <- KiteLogin.login
       user         <- KiteLogin.createSession(requestToken)
       _            <- Console.printLine(s"${user.userName} logged in successfully.")
-      cepe         <- KiteService.getCEPEInstrument(nfo, nifty, expiryDay, price)
+      cepe         <- KiteService.getCEPEInstrument(instrumentRequest, price)
       _            <- Console.printLine(cepe)
     yield ()

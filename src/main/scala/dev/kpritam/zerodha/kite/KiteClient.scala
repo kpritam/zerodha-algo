@@ -12,7 +12,7 @@ import scala.jdk.CollectionConverters.{CollectionHasAsScala, MapHasAsScala}
 trait KiteClient:
   def getInstruments: Task[List[Instrument]]
   def getInstruments(exchange: Exchange): Task[List[Instrument]]
-  def getInstruments(exchange: Exchange, name: String, expiryDate: Date): Task[List[Instrument]]
+  def getInstruments(request: InstrumentRequest): Task[List[Instrument]]
 
   def getQuote(request: QuoteRequest): Task[Quote]
   def getQuotes(request: List[QuoteRequest]): Task[Map[QuoteRequest, Quote]]
@@ -34,51 +34,36 @@ case class KiteClientLive(kiteConnect: KiteConnect) extends KiteClient:
       kiteConnect.getInstruments(exchange.toString).asScala.toList.map(Instrument.from)
     }
 
-  def getInstruments(
-      exchange: Exchange,
-      name: String,
-      expiryDate: Date
-  ): Task[List[Instrument]] =
-    getInstruments(exchange).map(
-      _.filter(i => i.name == name && expiryDate.compareTo(i.expiry) == 0)
+  def getInstruments(request: InstrumentRequest): Task[List[Instrument]] =
+    getInstruments(request.exchange).map(
+      _.filter(i => i.name == request.name && request.expiryDate.compareTo(i.expiry) == 0)
     )
 
   def getQuote(request: QuoteRequest): Task[Quote] =
     for
       quotes <- getQuotes(List(request))
-      quote  <-
-        ZIO
-          .fromOption(quotes.get(QuoteRequest.from(request.instrument)))
-          .orElseFail(QuoteNoteFound(request.instrument))
+      token  <- QuoteRequest.from(request.instrument)
+      quote  <- ZIO.getOrFailWith(QuoteNoteFound(request.instrument))(quotes.get(token))
     yield quote
 
   def getQuotes(request: List[QuoteRequest]): Task[Map[QuoteRequest, Quote]] =
-    ZIO.attemptBlocking {
-      kiteConnect
-        .getQuote(request.map(_.instrument).toArray)
-        .asScala
-        .map((k, v) => (QuoteRequest.from(k), v))
-        .toMap
-    }
+    for
+      map    <- ZIO.attemptBlocking(kiteConnect.getQuote(request.map(_.instrument).toArray).asScala)
+      quotes <- mkQuoteRequestMap(map.toMap)
+    yield quotes
 
   def getLTP(request: QuoteRequest): Task[LTPQuote] =
     for
       ltpQuotes <- getLTPs(List(request))
-      ltpQuote  <- ZIO.fromEither(
-                     ltpQuotes
-                       .get(QuoteRequest.from(request.instrument))
-                       .toRight(QuoteNoteFound(request.instrument))
-                   )
+      quote     <- QuoteRequest.from(request.instrument)
+      ltpQuote  <- ZIO.getOrFailWith(QuoteNoteFound(request.instrument))(ltpQuotes.get(quote))
     yield ltpQuote
 
   def getLTPs(request: List[QuoteRequest]): Task[Map[QuoteRequest, LTPQuote]] =
-    ZIO.attemptBlocking {
-      kiteConnect
-        .getLTP(request.map(_.instrument).toArray)
-        .asScala
-        .map((k, v) => (QuoteRequest.from(k), v))
-        .toMap
-    }
+    for
+      map       <- ZIO.attemptBlocking(kiteConnect.getLTP(request.map(_.instrument).toArray).asScala)
+      ltpQuotes <- mkQuoteRequestMap(map.toMap)
+    yield ltpQuotes
 
   def placeOrder(orderParams: OrderParams, variety: String): Task[Order] =
     ZIO.attemptBlocking {
@@ -96,6 +81,11 @@ case class KiteClientLive(kiteConnect: KiteConnect) extends KiteClient:
   def getOrders(orderIds: List[String]): Task[List[Order]] =
     getOrders.map(_.filter(order => orderIds.contains(order.orderId)))
 
+  private def mkQuoteRequestMap[T](
+      map: Map[String, T]
+  ): IO[InvalidInstrumentToken, Map[QuoteRequest, T]] =
+    ZIO.foreach(map)((k, v) => QuoteRequest.from(k).map(q => (q, v)))
+
 object KiteClient:
   val live: ZLayer[KiteConnect, Nothing, KiteClientLive] =
     ZLayer.fromFunction(KiteClientLive.apply)
@@ -106,12 +96,8 @@ object KiteClient:
   def getInstruments(exchange: Exchange): RIO[KiteClient, List[Instrument]] =
     ZIO.serviceWithZIO[KiteClient](_.getInstruments(exchange))
 
-  def getInstruments(
-      exchange: Exchange,
-      name: String,
-      expiryDate: Date
-  ): RIO[KiteClient, List[Instrument]] =
-    ZIO.serviceWithZIO[KiteClient](_.getInstruments(exchange, name, expiryDate))
+  def getInstruments(request: InstrumentRequest): RIO[KiteClient, List[Instrument]] =
+    ZIO.serviceWithZIO[KiteClient](_.getInstruments(request))
 
   def getQuote(request: QuoteRequest): RIO[KiteClient, Quote] =
     ZIO.serviceWithZIO[KiteClient](_.getQuote(request))

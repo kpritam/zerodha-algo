@@ -5,57 +5,33 @@ import dev.kpritam.zerodha.kite.models.*
 import zio.*
 
 trait KiteService:
-  def getInstrumentsWithLTP(
-      exchange: Exchange,
-      name: String,
-      expiryDate: Date
-  ): Task[List[Instrument]]
+  def getInstrumentsWithLTP(request: InstrumentRequest): Task[List[Instrument]]
 
-  def getCEPEInstrument(
-      exchange: Exchange,
-      name: String,
-      expiryDate: Date,
-      price: Double
-  ): Task[CEPEInstrument]
+  def getCEPEInstrument(request: InstrumentRequest, price: Double): Task[CEPEInstrument]
 
 object KiteService:
   val live = ZLayer.fromFunction(KiteServiceLive.apply)
 
-  def getInstrumentsWithLTP(
-      exchange: Exchange,
-      name: String,
-      expiryDate: Date
-  ): RIO[KiteService, List[Instrument]] =
-    ZIO.serviceWithZIO(_.getInstrumentsWithLTP(exchange, name, expiryDate))
+  def getInstrumentsWithLTP(request: InstrumentRequest): RIO[KiteService, List[Instrument]] =
+    ZIO.serviceWithZIO(_.getInstrumentsWithLTP(request))
 
   def getCEPEInstrument(
-      exchange: Exchange,
-      name: String,
-      expiryDate: Date,
+      request: InstrumentRequest,
       price: Double
   ): RIO[KiteService, CEPEInstrument] =
-    ZIO.serviceWithZIO(_.getCEPEInstrument(exchange, name, expiryDate, price))
+    ZIO.serviceWithZIO(_.getCEPEInstrument(request, price))
 
 case class KiteServiceLive(kiteClient: KiteClient) extends KiteService:
-  def getInstrumentsWithLTP(
-      exchange: Exchange,
-      name: String,
-      expiryDate: Date
-  ): Task[List[Instrument]] =
+  def getInstrumentsWithLTP(request: InstrumentRequest): Task[List[Instrument]] =
     def token(i: Instrument) = QuoteRequest.InstrumentToken(i.instrumentToken)
     for
-      instruments <- kiteClient.getInstruments(exchange, name, expiryDate)
+      instruments <- kiteClient.getInstruments(request)
       ltp         <- kiteClient.getLTPs(instruments.map(token))
     yield instruments.map(i => i.copy(lastPrice = ltp.get(token(i)).map(_.lastPrice).getOrElse(0)))
 
-  def getCEPEInstrument(
-      exchange: Exchange,
-      name: String,
-      expiryDate: Date,
-      price: Double
-  ): Task[CEPEInstrument] =
+  def getCEPEInstrument(request: InstrumentRequest, price: Double): Task[CEPEInstrument] =
     for
-      instruments <- getInstrumentsWithLTP(exchange, name, expiryDate)
+      instruments <- getInstrumentsWithLTP(request)
       ce          <- findInstrument(instruments.filter(_.isCE), price)
       pe          <- findInstrument(instruments.filter(_.isPE), ce.lastPrice)
     yield CEPEInstrument(ce, pe)

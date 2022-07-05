@@ -10,6 +10,11 @@ lazy val root = project
     version      := "0.1.0-SNAPSHOT",
     scalaVersion := scala3Version,
     fork         := true,
+    scalacOptions ++= Seq(
+      "-explain",
+      "-indent",
+      "-new-syntax"
+    ),
 
     // zio dependencies
     libraryDependencies += "dev.zio" %% "zio"                 % zioVersion,
