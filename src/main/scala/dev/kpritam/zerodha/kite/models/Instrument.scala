@@ -1,7 +1,10 @@
 package dev.kpritam.zerodha.kite.models
 
 import com.zerodhatech.models.Instrument as ZInstrument
+import dev.kpritam.zerodha.time.toIndiaLocalDate
+import zio.json.*
 
+import java.time.{LocalDate, ZoneId}
 import java.util.Date
 
 case class Instrument(
@@ -16,13 +19,16 @@ case class Instrument(
     exchange: String,
     strike: String,
     lotSize: Int,
-    expiry: Date
+    expiry: LocalDate
 ) {
   def isCE: Boolean = instrumentType == "CE"
   def isPE: Boolean = instrumentType == "PE"
+
+  def expiryDateEquals(that: LocalDate): Boolean = expiry.compareTo(that) == 0
 }
 
 object Instrument:
+  implicit val decoder: JsonCodec[Instrument]   = DeriveJsonCodec.gen[Instrument]
   def from(instrument: ZInstrument): Instrument =
     Instrument(
       instrument.instrument_token,
@@ -36,7 +42,10 @@ object Instrument:
       instrument.exchange,
       instrument.strike,
       instrument.lot_size,
-      instrument.expiry
+      instrument.expiry.toIndiaLocalDate
     )
 
 case class CEPEInstrument(ce: Instrument, pe: Instrument)
+
+object CEPEInstrument:
+  implicit val decoder: JsonCodec[CEPEInstrument] = DeriveJsonCodec.gen[CEPEInstrument]

@@ -36,7 +36,7 @@ case class KiteClientLive(kiteConnect: KiteConnect) extends KiteClient:
 
   def getInstruments(request: InstrumentRequest): Task[List[Instrument]] =
     getInstruments(request.exchange).map(
-      _.filter(i => i.name == request.name && request.expiryDate.compareTo(i.expiry) == 0)
+      _.filter(i => i.name == request.name && i.expiryDateEquals(request.expiryDate) )
     )
 
   def getQuote(request: QuoteRequest): Task[Quote] =

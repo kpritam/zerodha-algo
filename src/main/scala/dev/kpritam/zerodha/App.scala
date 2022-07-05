@@ -13,6 +13,7 @@ import java.time.{DayOfWeek, Instant}
 import javax.crypto.KeyGenerator
 import javax.crypto.spec.SecretKeySpec
 import sttp.client3.*
+import zio.json.EncoderOps
 
 val nfo               = Exchange("NFO")
 val nifty             = "NIFTY"
@@ -46,5 +47,5 @@ object App extends ZIOAppDefault:
       user         <- KiteLogin.createSession(requestToken)
       _            <- Console.printLine(s"${user.userName} logged in successfully.")
       cepe         <- KiteService.getCEPEInstrument(instrumentRequest, price)
-      _            <- Console.printLine(cepe)
+      _            <- Console.printLine(cepe.toJson)
     yield ()
