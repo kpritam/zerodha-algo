@@ -2,8 +2,6 @@ package dev.kpritam.zerodha.kite.login
 
 import zio.json.*
 
-case class LoginRequest(userId: String, password: String)
-
 case class LoginResponse(status: String, data: Data)
 case class Data(user_id: String, request_id: String, twofa_type: String, twofa_status: String)
 

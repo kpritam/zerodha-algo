@@ -17,7 +17,10 @@ case class Instrument(
     strike: String,
     lotSize: Int,
     expiry: Date
-)
+) {
+  def isCE: Boolean = instrumentType == "CE"
+  def isPE: Boolean = instrumentType == "PE"
+}
 
 object Instrument:
   def from(instrument: ZInstrument): Instrument =
@@ -35,3 +38,5 @@ object Instrument:
       instrument.lot_size,
       instrument.expiry
     )
+
+case class CEPEInstrument(ce: Instrument, pe: Instrument)

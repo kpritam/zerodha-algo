@@ -39,7 +39,9 @@ case class KiteClientLive(kiteConnect: KiteConnect) extends KiteClient:
       name: String,
       expiryDate: Date
   ): Task[List[Instrument]] =
-    getInstruments(exchange).map(_.filter(i => i.name == name && i.expiry == expiryDate))
+    getInstruments(exchange).map(
+      _.filter(i => i.name == name && expiryDate.compareTo(i.expiry) == 0)
+    )
 
   def getQuote(request: QuoteRequest): Task[Quote] =
     for
