@@ -28,7 +28,7 @@ case class Instrument(
 }
 
 object Instrument:
-  implicit val decoder: JsonCodec[Instrument]   = DeriveJsonCodec.gen[Instrument]
+  given JsonCodec[Instrument]   = DeriveJsonCodec.gen[Instrument]
   def from(instrument: ZInstrument): Instrument =
     Instrument(
       instrument.instrument_token,
@@ -48,4 +48,4 @@ object Instrument:
 case class CEPEInstrument(ce: Instrument, pe: Instrument)
 
 object CEPEInstrument:
-  implicit val decoder: JsonCodec[CEPEInstrument] = DeriveJsonCodec.gen[CEPEInstrument]
+  given JsonCodec[CEPEInstrument] = DeriveJsonCodec.gen[CEPEInstrument]

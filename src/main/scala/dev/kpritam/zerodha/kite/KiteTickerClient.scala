@@ -14,6 +14,12 @@ import scala.jdk.CollectionConverters.{IterableHasAsJava, SeqHasAsJava}
 trait KiteTickerClient:
   def subscribe(tokens: List[lang.Long]): UStream[Order]
 
+object KiteTickerClient:
+  val live = ZLayer.fromFunction(KiteTickerLive.apply)
+
+  def subscribe(tokens: List[lang.Long]): ZStream[KiteTickerClient, Nothing, Order] =
+    ZStream.serviceWithStream[KiteTickerClient](_.subscribe(tokens))
+
 case class KiteTickerLive(kiteTicker: KiteTicker) extends KiteTickerClient:
   def subscribe(tokens: List[lang.Long]): UStream[Order] =
     stream.ZStream
