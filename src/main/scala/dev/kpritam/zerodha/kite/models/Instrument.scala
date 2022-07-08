@@ -20,15 +20,15 @@ case class Instrument(
     strike: String,
     lotSize: Int,
     expiry: LocalDate
-) {
+):
   def isCE: Boolean = instrumentType == "CE"
   def isPE: Boolean = instrumentType == "PE"
 
   def expiryDateEquals(that: LocalDate): Boolean = expiry.compareTo(that) == 0
-}
 
 object Instrument:
-  given JsonCodec[Instrument]   = DeriveJsonCodec.gen[Instrument]
+  given JsonCodec[Instrument] = DeriveJsonCodec.gen[Instrument]
+
   def from(instrument: ZInstrument): Instrument =
     Instrument(
       instrument.instrument_token,
@@ -45,7 +45,8 @@ object Instrument:
       instrument.expiry.toIndiaLocalDate
     )
 
-case class CEPEInstrument(ce: Instrument, pe: Instrument)
+case class CEPEInstrument(ce: Instrument, pe: Instrument):
+  val tokens: List[java.lang.Long] = List(ce.instrumentToken, pe.instrumentToken)
 
 object CEPEInstrument:
   given JsonCodec[CEPEInstrument] = DeriveJsonCodec.gen[CEPEInstrument]

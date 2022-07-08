@@ -1,5 +1,6 @@
 package dev.kpritam.zerodha.kite.models
 
+import dev.kpritam.zerodha.kite.models.Order
 import QuoteRequest.InstrumentToken
 import zio.*
 
@@ -19,3 +20,6 @@ object QuoteRequest:
         ZIO.succeed(Instrument(TradingSymbol(tradingSymbol), Exchange(exchange)))
       case Array(token)                   => ZIO.succeed(InstrumentToken(token.toLong))
       case _                              => ZIO.fail(InvalidInstrumentToken(instrument))
+
+  def from(order: Order): QuoteRequest =
+    Instrument(TradingSymbol(order.tradingSymbol), Exchange(order.exchange))
