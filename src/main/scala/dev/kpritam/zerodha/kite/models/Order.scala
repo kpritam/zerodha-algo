@@ -33,6 +33,8 @@ case class Order(
     guid: String | Null = null,
     validityTTL: Int | Null = null
 ):
+  def completed: Boolean = status != null && status.equalsIgnoreCase("COMPLETE")
+
   // fixme: why flow typing does not work?
   def averagePriceOrZero: Double = if averagePrice != null then averagePrice.nn else 0
   def priceOrZero: Double        = if price != null then price.nn else 0

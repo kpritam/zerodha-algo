@@ -1,9 +1,10 @@
 package dev.kpritam.zerodha.strategies
 
+import com.zerodhatech.ticker.KiteTicker
 import dev.kpritam.zerodha.kite.login.KiteLogin
 import dev.kpritam.zerodha.kite.models.QuoteRequest.InstrumentToken
 import dev.kpritam.zerodha.kite.models.*
-import dev.kpritam.zerodha.kite.{KiteClient, KiteService, KiteTickerClient}
+import dev.kpritam.zerodha.kite.{KiteClient, KiteService, KiteTickerClient, KiteTickerLive}
 import dev.kpritam.zerodha.time.nextWeekday
 import dev.kpritam.zerodha.utils.triggerPriceAndPrice
 import zio.*
@@ -21,7 +22,7 @@ val regular           = "regular"
 
 val orderRequest = OrderRequest(
   exchange = nfo.toString,
-  validity = "Day",
+  validity = "DAY",
   product = "NRML",
   orderType = "MARKET",
   transactionType = "SELL",
@@ -45,6 +46,9 @@ val strategy =
     peOrderFiber <- placeOrder(mkPEOrderRequest(orderRequest, cepe), regular, peOrder).fork
 
     _ <- runOrderCompletionTasks(orderRequest, cepe.tokens, ceOrder, peOrder)
+           .provideSomeLayer(
+             ZLayer.succeed(KiteTickerLive(KiteTicker(user.accessToken, user.apiKey)))
+           )
 
     _ <- ceOrderFiber.zip(peOrderFiber).join
   yield ()
@@ -75,24 +79,24 @@ private def runOrderCompletionTasks(
     peRef: Ref[Option[Order]]
 ) =
   for
-    ceSLOrderRef <- Ref.make[Option[Order]](None)
-    peSLOrderRef <- Ref.make[Option[Order]](None)
-    res          <- KiteTickerClient
-                      .subscribeOrders(tokens)
-                      .filter(_.status.equalsIgnoreCase("COMPLETE"))
-                      .mapZIO { o =>
-                        for
-                          ceOrder   <- ceRef.get
-                          peOrder   <- peRef.get
-                          ceSLOrder <- ceSLOrderRef.get
-                          peSLOrder <- peSLOrderRef.get
-                          _         <- ZIO.when(orderEq(ceOrder, o))(placeSLBuyOrder(orderReq, o, ceSLOrderRef))
-                          _         <- ZIO.when(orderEq(peOrder, o))(placeSLBuyOrder(orderReq, o, peSLOrderRef))
-                          _         <- ZIO.when(orderEq(ceSLOrder, o))(modifyOrder(orderReq, peOrder))
-                          _         <- ZIO.when(orderEq(peSLOrder, o))(modifyOrder(orderReq, ceOrder))
-                        yield ()
-                      }
-                      .runDrain
+    ceSLRef <- Ref.make[Option[Order]](None)
+    peSLRef <- Ref.make[Option[Order]](None)
+    res     <- KiteTickerClient
+                 .subscribeOrders(tokens)
+                 .filter(_.completed)
+                 .mapZIO { o =>
+                   for
+                     ceOrder   <- ceRef.get
+                     peOrder   <- peRef.get
+                     ceSLOrder <- ceSLRef.get
+                     peSLOrder <- peSLRef.get
+                     _         <- ZIO.when(orderEq(ceOrder, o))(placeSLBuyOrder(orderReq, o, ceSLRef))
+                     _         <- ZIO.when(orderEq(peOrder, o))(placeSLBuyOrder(orderReq, o, peSLRef))
+                     _         <- ZIO.when(orderEq(ceSLOrder, o))(modifyOrder(orderReq, peOrder))
+                     _         <- ZIO.when(orderEq(peSLOrder, o))(modifyOrder(orderReq, ceOrder))
+                   yield ()
+                 }
+                 .runDrain
   yield res
 
 private def modifyOrder(orderReq: OrderRequest, order: Option[Order]) =
