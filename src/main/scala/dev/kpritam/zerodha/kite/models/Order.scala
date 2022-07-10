@@ -24,7 +24,7 @@ case class Order(
     orderTimestamp: Date | Null = null,
     exchangeTimestamp: Date | Null = null,
     exchangeUpdateTimestamp: Date | Null = null,
-    averagePrice: Double | Null = null,
+    avgPrice: Double | Null = null,
     transactionType: String | Null = null,
     filledQuantity: String | Null = null,
     quantity: Double | Null = null,
@@ -36,8 +36,8 @@ case class Order(
   def completed: Boolean = status != null && status.equalsIgnoreCase("COMPLETE")
 
   // fixme: why flow typing does not work?
-  def averagePriceOrZero: Double = if averagePrice != null then averagePrice.nn else 0
-  def priceOrZero: Double        = if price != null then price.nn else 0
+  def avgPriceOrZero: Double = if avgPrice != null then avgPrice.nn else 0
+  def priceOrZero: Double    = if price != null then price.nn else 0
 
 object Order:
   def from(o: ZOrder): Order =

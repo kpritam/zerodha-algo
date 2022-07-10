@@ -17,7 +17,7 @@ case class Instrument(
     instrumentType: String,
     segment: String,
     exchange: String,
-    strike: String,
+    strike: Double,
     lotSize: Int,
     expiry: LocalDate
 ):
@@ -40,7 +40,7 @@ object Instrument:
       instrument.instrument_type,
       instrument.segment,
       instrument.exchange,
-      instrument.strike,
+      instrument.strike.toDouble,
       instrument.lot_size,
       instrument.expiry.toIndiaLocalDate
     )

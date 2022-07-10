@@ -27,7 +27,7 @@ case class KiteServiceLive(kiteClient: KiteClient) extends KiteService:
     for
       instruments <- kiteClient.getInstruments(request)
       ltp         <- kiteClient.getLTPs(instruments.map(token))
-    yield instruments.map(i => i.copy(lastPrice = ltp.getLastPrice(i.instrumentToken)))
+    yield instruments.map(i => i.copy(lastPrice = ltp.getLastPriceOrZero(i.instrumentToken)))
 
   def getCEPEInstrument(request: InstrumentRequest, price: Double): Task[CEPEInstrument] =
     for

@@ -5,7 +5,7 @@ import com.zerodhatech.ticker.KiteTicker
 import dev.kpritam.zerodha.kite.{KiteClient, KiteConfig, KiteService, KiteTickerClient}
 import dev.kpritam.zerodha.kite.login.{KiteLogin, Totp}
 import dev.kpritam.zerodha.kite.models.{Exchange, InstrumentRequest}
-import dev.kpritam.zerodha.strategies.strategy
+import dev.kpritam.zerodha.strategies.everyday.strategy
 import dev.kpritam.zerodha.time.nextWeekday
 import zio.*
 
