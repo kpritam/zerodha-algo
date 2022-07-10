@@ -52,7 +52,7 @@ private def orderEq(o1: Option[Order], o2: Order) = o1.exists(_.orderId == o2.or
 private def placeSLOrder(orderReq: OrderRequest, order: Order, update: Order => UIO[Unit]) =
   for
     quote      <- KiteClient.getQuote(QuoteRequest.from(order))
-    (tp, price) = triggerPriceAndPrice(order.avgPriceOrZero, quote)
+    (tp, price) = triggerPriceAndPrice(order.avgPrice, quote)
     res        <- KiteClient.placeOrder(orderReq.toSLBuy(tp, price, order.tradingSymbol), regular)
     _          <- update(res)
   yield res
@@ -82,8 +82,8 @@ private def modifyOrder(orderReq: OrderRequest, order: Option[Order]) =
     o          <- ZIO.getOrFail(order)
     newOrder    = orderReq.copy(exchange = o.exchange)
     quote      <- KiteClient.getQuote(QuoteRequest.from(o))
-    _          <- ZIO.when(quote.lastPrice * 2.5 > o.priceOrZero)(
-                    ZIO.fail(LastPriceExceeds(quote.lastPrice, o.priceOrZero))
+    _          <- ZIO.when(quote.lastPrice * 2.5 > o.price)(
+                    ZIO.fail(LastPriceExceeds(quote.lastPrice, o.price))
                   )
     (tp, price) = triggerPriceAndPrice(quote.lastPrice, quote)
     res        <- KiteClient.modifyOrder(o.orderId, newOrder.toSLBuy(tp, price, o.tradingSymbol), regular)
