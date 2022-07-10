@@ -23,6 +23,9 @@ val strategy =
     user         <- KiteLogin.createSession(requestToken)
     _            <- Console.printLine(s"${user.userName} logged in successfully.")
 
+    // seed
+    _ <- KiteService.seedInstruments(instrumentRequest)
+
     cepe <- KiteService.getCEPEInstrument(instrumentRequest, price)
     _    <- Console.printLine(cepe.toJson)
 

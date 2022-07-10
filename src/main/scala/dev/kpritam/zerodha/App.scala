@@ -2,6 +2,7 @@ package dev.kpritam.zerodha
 
 import com.zerodhatech.kiteconnect.KiteConnect
 import com.zerodhatech.ticker.KiteTicker
+import dev.kpritam.zerodha.db.Instruments
 import dev.kpritam.zerodha.kite.{KiteClient, KiteConfig, KiteService, KiteTickerClient}
 import dev.kpritam.zerodha.kite.login.{KiteLogin, Totp}
 import dev.kpritam.zerodha.kite.models.{Exchange, InstrumentRequest}
@@ -35,7 +36,8 @@ object App extends ZIOAppDefault:
         KiteClient.live,
         KiteService.live,
         Totp.live,
-        sttpBackend
+        sttpBackend,
+        Instruments.live
       )
 
   private def program = strategy.cause.debug

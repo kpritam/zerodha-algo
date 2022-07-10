@@ -1,13 +1,18 @@
 package dev.kpritam.zerodha.kite
 
+import dev.kpritam.zerodha.db.Instruments
+
 import java.util.Date
 import dev.kpritam.zerodha.kite.models.*
 import zio.*
 
+import java.sql.SQLException
+import javax.sql.DataSource
+
 trait KiteService:
   def getInstrumentsWithLTP(request: InstrumentRequest): Task[List[Instrument]]
-
   def getCEPEInstrument(request: InstrumentRequest, price: Double): Task[CEPEInstrument]
+  def seedInstruments(request: InstrumentRequest): Task[List[Long]]
 
 object KiteService:
   val live = ZLayer.fromFunction(KiteServiceLive.apply)
@@ -21,7 +26,10 @@ object KiteService:
   ): RIO[KiteService, CEPEInstrument] =
     ZIO.serviceWithZIO(_.getCEPEInstrument(request, price))
 
-case class KiteServiceLive(kiteClient: KiteClient) extends KiteService:
+  def seedInstruments(request: InstrumentRequest): RIO[KiteService, List[Long]] =
+    ZIO.serviceWithZIO(_.seedInstruments(request))
+
+case class KiteServiceLive(kiteClient: KiteClient, instruments: Instruments) extends KiteService:
   def getInstrumentsWithLTP(request: InstrumentRequest): Task[List[Instrument]] =
     def token(i: Instrument) = QuoteRequest.InstrumentToken(i.instrumentToken)
     for
@@ -31,10 +39,13 @@ case class KiteServiceLive(kiteClient: KiteClient) extends KiteService:
 
   def getCEPEInstrument(request: InstrumentRequest, price: Double): Task[CEPEInstrument] =
     for
-      instruments <- getInstrumentsWithLTP(request)
+      instruments <- instruments.all
       ce          <- findInstrument(instruments.filter(_.isCE), price)
       pe          <- findInstrument(instruments.filter(_.isPE), ce.lastPrice)
     yield CEPEInstrument(ce, pe)
+
+  def seedInstruments(request: InstrumentRequest): Task[List[Long]] =
+    getInstrumentsWithLTP(request).flatMap(instruments.seed)
 
   private def findInstrument(instruments: List[Instrument], price: Double): Task[Instrument] =
     ZIO.getOrFail(instruments.minByOption(i => math.abs(i.lastPrice - price)))
