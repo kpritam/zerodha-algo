@@ -1,6 +1,5 @@
 package dev.kpritam.zerodha.strategies.everyday
 
-import com.zerodhatech.ticker.KiteTicker
 import dev.kpritam.zerodha.db.Instruments
 import dev.kpritam.zerodha.kite.login.KiteLogin
 import dev.kpritam.zerodha.kite.models.QuoteRequest.InstrumentToken
@@ -14,7 +13,7 @@ import zio.json.*
 import zio.logging.*
 
 import java.lang.Double
-import java.util.Calendar
+import scala.concurrent.duration.DurationInt
 
 val everyday =
   for
@@ -32,14 +31,17 @@ val everyday =
     cepe <- KiteService.getCEPEInstrument(instrumentRequest, price)
     _    <- ZIO.logInfo(s"Selected instruments: ${cepe.toJson}")
 
-    kiteTickerLayer = ZLayer.succeed(KiteTickerLive(KiteTicker(user.accessToken, user.apiKey)))
-    _              <- KiteTickerClient.init.provideSomeLayer(kiteTickerLayer)
-    _              <- runOrderCompletionTasks(orderRequest, cepe.tokens, state).provideSomeLayer(kiteTickerLayer)
+    _ <-
+      (for
+        _  <- KiteTickerClient.init
+        f1 <- runOrderCompletionTasks(orderRequest, cepe.tokens, state).fork
+        _  <- ZIO.sleep(1.seconds)
 
-    // place CE & PE market sell order
-    ceOrderFiber <- placeOrder(mkCEOrderRequest(orderRequest, cepe), regular, state.updateCe).fork
-    peOrderFiber <- placeOrder(mkPEOrderRequest(orderRequest, cepe), regular, state.updatePe).fork
-    _            <- ceOrderFiber.zip(peOrderFiber).join
+        // place CE & PE market sell order
+        f2 <- placeOrder(mkCEOrderRequest(orderRequest, cepe), regular, state.updateCe).fork
+        f3 <- placeOrder(mkPEOrderRequest(orderRequest, cepe), regular, state.updatePe).fork
+        _  <- f2.zip(f3).zip(f1).join
+      yield ()).provideSomeLayer(KiteTickerClient.live(user))
   yield ()
 
 private def mkCEOrderRequest(orderReq: OrderRequest, cepe: CEPEInstrument) =
