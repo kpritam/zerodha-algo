@@ -9,6 +9,11 @@ case class State(
     ceSLOrder: Option[Order] = None,
     peSLOrder: Option[Order] = None
 ):
+  val ceOrderId: Option[String]   = ceOrder.map(_.orderId)
+  val peOrderId: Option[String]   = peOrder.map(_.orderId)
+  val ceSLOrderId: Option[String] = ceSLOrder.map(_.orderId)
+  val peSLOrderId: Option[String] = peSLOrder.map(_.orderId)
+
   def updateCe(o: Order): State   = copy(ceOrder = Some(o))
   def updatePe(o: Order): State   = copy(peOrder = Some(o))
   def updateCeSL(o: Order): State = copy(ceSLOrder = Some(o))

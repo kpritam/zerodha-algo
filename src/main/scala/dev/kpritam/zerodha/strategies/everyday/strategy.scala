@@ -55,8 +55,6 @@ private def placeOrder(orderReq: OrderRequest, variety: String, update: Order =>
     _   <- ZIO.logDebug(s"Order placed: $res")
   yield res
 
-private def orderEq(o1: Option[Order], o2: Order) = o1.exists(_.orderId == o2.orderId)
-
 private def placeSLOrder(orderReq: OrderRequest, order: Order, update: Order => UIO[Unit]) =
   for
     _          <- ZIO.logDebug(s"Placing SL order: $orderReq")
@@ -81,10 +79,12 @@ private def runOrderCompletionTasks(
                for
                  _ <- ZIO.logDebug(s"Order completed: $o")
                  s <- state.get
-                 _ <- ZIO.when(orderEq(s.ceOrder, o))(placeSLOrder(orderReq, o, state.updateCeSL))
-                 _ <- ZIO.when(orderEq(s.peOrder, o))(placeSLOrder(orderReq, o, state.updatePeSL))
-                 _ <- ZIO.when(orderEq(s.ceSLOrder, o))(modifyOrder(orderReq, s.peOrder))
-                 _ <- ZIO.when(orderEq(s.peSLOrder, o))(modifyOrder(orderReq, s.ceOrder))
+                 _ <- ZIO.whenCase(Some(o.orderId)) {
+                        case s.ceOrderId   => placeSLOrder(orderReq, o, state.updateCeSL)
+                        case s.peOrderId   => placeSLOrder(orderReq, o, state.updatePeSL)
+                        case s.ceSLOrderId => modifyOrder(orderReq, s.peOrder)
+                        case s.peSLOrderId => modifyOrder(orderReq, s.ceOrder)
+                      }
                yield ()
              }
              .runDrain

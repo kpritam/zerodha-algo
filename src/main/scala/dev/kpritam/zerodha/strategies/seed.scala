@@ -12,9 +12,8 @@ import java.time.LocalDateTime
 def seedInstrumentsIfNeeded(request: InstrumentRequest) =
   for
     instruments <- Instruments.all
-    _           <- ZIO.when(!isAfter(instruments, 9, 15))(
-                     ZIO.logDebug("Downloading instruments ...") *>
-                       KiteService.seedInstruments(instrumentRequest)
+    _           <- ZIO.unless(isAfter(instruments, 9, 15))(
+                     ZIO.logDebug("Downloading instruments ...") *> KiteService.seedInstruments(request)
                    )
   yield ()
 
