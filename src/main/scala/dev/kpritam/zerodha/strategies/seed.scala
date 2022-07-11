@@ -13,7 +13,7 @@ def seedInstrumentsIfNeeded(request: InstrumentRequest) =
   for
     instruments <- Instruments.all
     _           <- ZIO.when(!isAfter(instruments, 9, 15))(
-                     Console.printLine("Downloading instruments ...") *>
+                     ZIO.logDebug("Downloading instruments ...") *>
                        KiteService.seedInstruments(instrumentRequest)
                    )
   yield ()

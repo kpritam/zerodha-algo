@@ -21,7 +21,6 @@ object KiteTickerClient:
     ZStream.serviceWithStream[KiteTickerClient](_.subscribe(tokens))
 
 case class KiteTickerLive(kiteTicker: KiteTicker) extends KiteTickerClient:
-  kiteTicker.connect()
   kiteTicker.setOnConnectedListener(() => println("[ws] Connected"))
   kiteTicker.setOnDisconnectedListener(() => println("[ws] Disconnected"))
   kiteTicker.setOnErrorListener(new ticker.OnError {
@@ -29,10 +28,11 @@ case class KiteTickerLive(kiteTicker: KiteTicker) extends KiteTickerClient:
     override def onError(error: Exception): Unit     = println(s"[ws] Error2: $error")
     override def onError(error: KiteException): Unit = println(s"[ws] Error3: $error")
   })
+  kiteTicker.connect()
 
   def subscribe(tokens: List[lang.Long]): UStream[Order] =
-    stream.ZStream
+    kiteTicker.subscribe(java.util.ArrayList[lang.Long](tokens.asJava))
+    ZStream
       .async { cb =>
-        kiteTicker.subscribe(java.util.ArrayList[lang.Long](tokens.asJava))
         kiteTicker.setOnOrderUpdateListener(zOrder => cb(ZIO.succeed(Chunk(Order.from(zOrder)))))
       }

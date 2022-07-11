@@ -19,6 +19,7 @@ lazy val root = project
     // zio dependencies
     libraryDependencies += "dev.zio" %% "zio"                 % zioVersion,
     libraryDependencies += "dev.zio" %% "zio-streams"         % zioVersion,
+    libraryDependencies += "dev.zio" %% "zio-logging"         % zioVersion,
     libraryDependencies += "dev.zio" %% "zio-config"          % zioConfigVersion,
     libraryDependencies += "dev.zio" %% "zio-config-magnolia" % zioConfigVersion,
 

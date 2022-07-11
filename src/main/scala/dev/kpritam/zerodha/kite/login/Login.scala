@@ -58,7 +58,7 @@ case class KiteLoginLive(
     yield requestToken
 
   def loginManual: Task[String] =
-    Console.printLine(kiteConnect.getLoginURL) *> Console.readLine
+    ZIO.logInfo(kiteConnect.getLoginURL) *> Console.readLine
 
   def createSession(requestToken: String): Task[User] =
     for {

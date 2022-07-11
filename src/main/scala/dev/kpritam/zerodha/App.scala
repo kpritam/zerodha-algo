@@ -9,6 +9,7 @@ import dev.kpritam.zerodha.kite.models.{Exchange, InstrumentRequest}
 import dev.kpritam.zerodha.strategies.everyday.everyday
 import dev.kpritam.zerodha.time.nextWeekday
 import zio.*
+import zio.logging
 
 import java.security.Key
 import java.util.{Calendar, Date}
@@ -20,7 +21,8 @@ import zio.ZLayer.Debug
 import zio.json.EncoderOps
 
 object App extends ZIOAppDefault:
-  private val kiteConnectLive = ZLayer.fromFunction((cfg: KiteConfig) => KiteConnect(cfg.apiKey))
+  private val kiteConnectLive =
+    ZLayer.fromFunction((cfg: KiteConfig) => KiteConnect(cfg.apiKey))
 
   // zerodha kite login flow requires cookies to be passed along in redirects
   private val sttpBackend = ZLayer.succeed(
@@ -30,6 +32,7 @@ object App extends ZIOAppDefault:
   def run: ZIO[Any, Any, Any] =
     program
       .provide(
+        logging.console(logLevel = LogLevel.All),
         Totp.live,
         sttpBackend,
         // kite

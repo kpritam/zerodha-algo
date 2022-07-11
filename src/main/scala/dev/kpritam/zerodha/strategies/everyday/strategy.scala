@@ -11,6 +11,7 @@ import dev.kpritam.zerodha.time.nextWeekday
 import dev.kpritam.zerodha.utils.triggerPriceAndPrice
 import zio.*
 import zio.json.*
+import zio.logging.*
 
 import java.lang.Double
 import java.util.Calendar
@@ -23,24 +24,22 @@ val everyday =
     // login
     requestToken <- KiteLogin.login
     user         <- KiteLogin.createSession(requestToken)
-    _            <- Console.printLine(s"${user.userName} logged in successfully.")
+    _            <- ZIO.logInfo(s"${user.userName} logged in successfully.")
 
     // seed
     _ <- seedInstrumentsIfNeeded(instrumentRequest)
 
     cepe <- KiteService.getCEPEInstrument(instrumentRequest, price)
-    _    <- Console.printLine(cepe.toJson)
+    _    <- ZIO.logInfo(s"Selected instruments: ${cepe.toJson}")
+
+    _            <- runOrderCompletionTasks(orderRequest, cepe.tokens, state).provideSomeLayer(
+                      ZLayer.succeed(KiteTickerLive(KiteTicker(user.accessToken, user.apiKey)))
+                    )
 
     // place CE & PE market sell order
     ceOrderFiber <- placeOrder(mkCEOrderRequest(orderRequest, cepe), regular, state.updateCe).fork
     peOrderFiber <- placeOrder(mkPEOrderRequest(orderRequest, cepe), regular, state.updatePe).fork
-
-    _ <- runOrderCompletionTasks(orderRequest, cepe.tokens, state)
-           .provideSomeLayer(
-             ZLayer.succeed(KiteTickerLive(KiteTicker(user.accessToken, user.apiKey)))
-           )
-
-    _ <- ceOrderFiber.zip(peOrderFiber).join
+    _            <- ceOrderFiber.zip(peOrderFiber).join
   yield ()
 
 private def mkCEOrderRequest(orderReq: OrderRequest, cepe: CEPEInstrument) =
@@ -51,21 +50,21 @@ private def mkPEOrderRequest(orderReq: OrderRequest, cepe: CEPEInstrument) =
 
 private def placeOrder(orderReq: OrderRequest, variety: String, update: Order => UIO[Unit]) =
   for
-    _   <- Console.printLine(s"Placing order: $orderReq")
+    _   <- ZIO.logDebug(s"Placing order: $orderReq")
     res <- KiteService.placeOrder(orderReq, variety).tap(update)
-    _   <- Console.printLine(s"Order placed: $res")
+    _   <- ZIO.logDebug(s"Order placed: $res")
   yield res
 
 private def orderEq(o1: Option[Order], o2: Order) = o1.exists(_.orderId == o2.orderId)
 
 private def placeSLOrder(orderReq: OrderRequest, order: Order, update: Order => UIO[Unit]) =
   for
-    _          <- Console.printLine(s"Placing SL order: $orderReq")
+    _          <- ZIO.logDebug(s"Placing SL order: $orderReq")
     quote      <- KiteClient.getQuote(QuoteRequest.from(order))
     (tp, price) = triggerPriceAndPrice(order.averagePrice, quote)
-    res        <- KiteService.placeOrder(orderReq.toSLBuy(tp, price, order.tradingSymbol), regular)
-    _          <- update(res)
-    _          <- Console.printLine(s"SL order placed: $res")
+    res        <-
+      KiteService.placeOrder(orderReq.toSLBuy(tp, price, order.tradingSymbol), regular).tap(update)
+    _          <- ZIO.logDebug(s"SL order placed: $res")
   yield res
 
 private def runOrderCompletionTasks(
@@ -74,13 +73,13 @@ private def runOrderCompletionTasks(
     state: Ref[State]
 ) =
   for
-    _   <- Console.printLine(s"Subscribing to tokens: ${tokens.mkString(", ")}")
+    _   <- ZIO.logDebug(s"Subscribing to tokens: ${tokens.mkString(", ")}")
     res <- KiteTickerClient
              .subscribeOrders(tokens)
              .filter(_.completed)
              .mapZIO { o =>
                for
-                 _ <- Console.printLine(s"Order completed: $o")
+                 _ <- ZIO.logDebug(s"Order completed: $o")
                  s <- state.get
                  _ <- ZIO.when(orderEq(s.ceOrder, o))(placeSLOrder(orderReq, o, state.updateCeSL))
                  _ <- ZIO.when(orderEq(s.peOrder, o))(placeSLOrder(orderReq, o, state.updatePeSL))
@@ -93,7 +92,7 @@ private def runOrderCompletionTasks(
 
 private def modifyOrder(orderReq: OrderRequest, order: Option[Order]) =
   for
-    _          <- Console.printLine(s"Modifying order: $order")
+    _          <- ZIO.logDebug(s"Modifying order: $order")
     o          <- ZIO.getOrFail(order)
     newOrder    = orderReq.copy(exchange = o.exchange)
     quote      <- KiteClient.getQuote(QuoteRequest.from(o))
@@ -102,5 +101,5 @@ private def modifyOrder(orderReq: OrderRequest, order: Option[Order]) =
                   )
     (tp, price) = triggerPriceAndPrice(quote.lastPrice, quote)
     res        <- KiteClient.modifyOrder(o.orderId, newOrder.toSLBuy(tp, price, o.tradingSymbol), regular)
-    _          <- Console.printLine(s"Order modified: $res")
+    _          <- ZIO.logDebug(s"Order modified: $res")
   yield res
