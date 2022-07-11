@@ -12,23 +12,25 @@ import java.lang
 import scala.jdk.CollectionConverters.{IterableHasAsJava, SeqHasAsJava}
 
 trait KiteTickerClient:
+  def init: Task[Unit]
   def subscribe(tokens: List[lang.Long]): UStream[Order]
 
 object KiteTickerClient:
   val live = ZLayer.fromFunction(KiteTickerLive.apply)
 
+  def init: RIO[KiteTickerClient, Unit] =
+    ZIO.serviceWithZIO[KiteTickerClient](_.init)
+
   def subscribeOrders(tokens: List[lang.Long]): ZStream[KiteTickerClient, Nothing, Order] =
     ZStream.serviceWithStream[KiteTickerClient](_.subscribe(tokens))
 
 case class KiteTickerLive(kiteTicker: KiteTicker) extends KiteTickerClient:
-  kiteTicker.setOnConnectedListener(() => println("[ws] Connected"))
-  kiteTicker.setOnDisconnectedListener(() => println("[ws] Disconnected"))
-  kiteTicker.setOnErrorListener(new ticker.OnError {
-    override def onError(error: String): Unit        = println(s"[ws] Error1: $error")
-    override def onError(error: Exception): Unit     = println(s"[ws] Error2: $error")
-    override def onError(error: KiteException): Unit = println(s"[ws] Error3: $error")
-  })
-  kiteTicker.connect()
+  def init: Task[Unit] =
+    for
+      _ <- ZIO.logDebug("Initializing Kite Ticker")
+      _ <- (onConnected <&> onDisconnected <&> onError).fork
+      _ <- ZIO.attemptBlocking(kiteTicker.connect())
+    yield ()
 
   def subscribe(tokens: List[lang.Long]): UStream[Order] =
     kiteTicker.subscribe(java.util.ArrayList[lang.Long](tokens.asJava))
@@ -36,3 +38,25 @@ case class KiteTickerLive(kiteTicker: KiteTicker) extends KiteTickerClient:
       .async { cb =>
         kiteTicker.setOnOrderUpdateListener(zOrder => cb(ZIO.succeed(Chunk(Order.from(zOrder)))))
       }
+
+  private def onDisconnected =
+    ZIO.async[Any, Nothing, Unit](cb =>
+      kiteTicker.setOnDisconnectedListener(() => cb(ZIO.logError("Disconnected from Kite Ticker")))
+    )
+
+  private def onConnected =
+    ZIO.async[Any, Nothing, Unit](cb =>
+      kiteTicker.setOnConnectedListener(() => cb(ZIO.logDebug("Connected to Kite Ticker")))
+    )
+
+  private def onError =
+    ZIO.async[Any, Nothing, Unit](cb =>
+      new ticker.OnError {
+        override def onError(error: String): Unit        =
+          cb(ZIO.logError(s"Kite Ticker onError: $error)"))
+        override def onError(error: Exception): Unit     =
+          cb(ZIO.logErrorCause("Kite Ticker onError", Cause.fail(error)))
+        override def onError(error: KiteException): Unit =
+          cb(ZIO.logErrorCause("Kite Ticker onError", Cause.fail(error)))
+      }
+    )

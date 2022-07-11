@@ -32,9 +32,9 @@ val everyday =
     cepe <- KiteService.getCEPEInstrument(instrumentRequest, price)
     _    <- ZIO.logInfo(s"Selected instruments: ${cepe.toJson}")
 
-    _            <- runOrderCompletionTasks(orderRequest, cepe.tokens, state).provideSomeLayer(
-                      ZLayer.succeed(KiteTickerLive(KiteTicker(user.accessToken, user.apiKey)))
-                    )
+    kiteTickerLayer = ZLayer.succeed(KiteTickerLive(KiteTicker(user.accessToken, user.apiKey)))
+    _              <- KiteTickerClient.init.provideSomeLayer(kiteTickerLayer)
+    _              <- runOrderCompletionTasks(orderRequest, cepe.tokens, state).provideSomeLayer(kiteTickerLayer)
 
     // place CE & PE market sell order
     ceOrderFiber <- placeOrder(mkCEOrderRequest(orderRequest, cepe), regular, state.updateCe).fork
