@@ -24,7 +24,7 @@ case class Order(
     orderTimestamp: Date | Null = null,
     exchangeTimestamp: Date | Null = null,
     exchangeUpdateTimestamp: Date | Null = null,
-    avgPrice: Double = 0,
+    averagePrice: Double = 0,
     transactionType: String | Null = null,
     filledQuantity: String | Null = null,
     quantity: Double = 0,

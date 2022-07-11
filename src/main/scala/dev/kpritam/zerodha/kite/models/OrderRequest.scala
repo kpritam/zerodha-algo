@@ -1,7 +1,6 @@
 package dev.kpritam.zerodha.kite.models
 
 import com.zerodhatech.models.OrderParams
-import scala.language.unsafeNulls
 
 case class OrderRequest(
     exchange: String | Null = null,

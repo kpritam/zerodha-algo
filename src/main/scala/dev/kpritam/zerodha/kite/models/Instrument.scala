@@ -1,10 +1,10 @@
 package dev.kpritam.zerodha.kite.models
 
 import com.zerodhatech.models.Instrument as ZInstrument
-import dev.kpritam.zerodha.time.toIndiaLocalDate
+import dev.kpritam.zerodha.time.{toIndiaLocalDate, indiaZone}
 import zio.json.*
 
-import java.time.{LocalDate, ZoneId}
+import java.time.{LocalDate, LocalDateTime, ZoneId}
 import java.util.Date
 
 case class Instrument(
@@ -19,7 +19,8 @@ case class Instrument(
     exchange: String,
     strike: Double,
     lotSize: Int,
-    expiry: LocalDate
+    expiry: LocalDate,
+    createdAt: LocalDateTime = LocalDateTime.now(indiaZone)
 ):
   def isCE: Boolean = instrumentType == "CE"
   def isPE: Boolean = instrumentType == "PE"

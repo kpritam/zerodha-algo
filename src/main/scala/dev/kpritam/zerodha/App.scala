@@ -2,11 +2,11 @@ package dev.kpritam.zerodha
 
 import com.zerodhatech.kiteconnect.KiteConnect
 import com.zerodhatech.ticker.KiteTicker
-import dev.kpritam.zerodha.db.Instruments
+import dev.kpritam.zerodha.db.{Instruments, Orders}
 import dev.kpritam.zerodha.kite.{KiteClient, KiteConfig, KiteService, KiteTickerClient}
 import dev.kpritam.zerodha.kite.login.{KiteLogin, Totp}
 import dev.kpritam.zerodha.kite.models.{Exchange, InstrumentRequest}
-import dev.kpritam.zerodha.strategies.everyday.strategy
+import dev.kpritam.zerodha.strategies.everyday.everyday
 import dev.kpritam.zerodha.time.nextWeekday
 import zio.*
 
@@ -27,17 +27,21 @@ object App extends ZIOAppDefault:
     new FollowRedirectsBackend(delegate = HttpClientSyncBackend(), sensitiveHeaders = Set())
   )
 
-  def run =
+  def run: ZIO[Any, Any, Any] =
     program
       .provide(
-        KiteConfig.live,
-        kiteConnectLive,
-        KiteLogin.live,
-        KiteClient.live,
-        KiteService.live,
         Totp.live,
         sttpBackend,
-        Instruments.live
+        // kite
+        kiteConnectLive,
+        KiteConfig.live,
+        KiteLogin.live,
+        KiteClient.live,
+        // service
+        KiteService.live,
+        // db
+        Instruments.live,
+        Orders.live
       )
 
-  private def program = strategy.cause.debug
+  private def program = everyday.cause.debug

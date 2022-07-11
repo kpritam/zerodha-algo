@@ -18,5 +18,5 @@ val orderRequest = OrderRequest(
   product = "NRML",
   orderType = "MARKET",
   transactionType = "SELL",
-  quantity = 500
+  quantity = 50
 )

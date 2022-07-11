@@ -19,6 +19,9 @@ trait Instruments:
 object Instruments:
   val live: ULayer[InstrumentsLive] = ZLayer.succeed(InstrumentsLive())
 
+  def all: ZIO[Instruments, SQLException, List[Instrument]] =
+    ZIO.serviceWithZIO[Instruments](_.all)
+
 case class InstrumentsLive() extends Instruments:
   import QuillCtx.*
 

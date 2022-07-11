@@ -14,8 +14,6 @@ case class State(
   def updateCeSL(o: Order): State = copy(ceSLOrder = Some(o))
   def updatePeSL(o: Order): State = copy(peSLOrder = Some(o))
 
-  def ceEq(o: Order): Boolean = ceOrder.exists(_.orderId == o.orderId)
-
 object State:
   def make: UIO[Ref[State]] = Ref.make(State())
 
