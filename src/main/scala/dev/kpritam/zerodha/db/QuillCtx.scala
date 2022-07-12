@@ -6,6 +6,6 @@ import zio.*
 
 import javax.sql.DataSource
 
-object QuillCtx extends SqliteZioJdbcContext(SnakeCase):
+object QuillCtx extends SqliteZioJdbcContext(NamingStrategy(SnakeCase, Escape)):
   val dataSourceLayer: ULayer[DataSource] =
     DataSourceLayer.fromPrefix("database").orDie

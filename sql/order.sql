@@ -10,7 +10,6 @@ create table "order"
     exchange_update_timestamp datetime,
     exchange_timestamp        datetime,
     variety                   text,
-    meta                      json,
     exchange                  text,
     trading_symbol            text,
     instrument_token          integer,
@@ -26,7 +25,8 @@ create table "order"
     filled_quantity           real,
     pending_quantity          real,
     tag                       text,
-    guid                      text
+    guid                      text,
+    validity_ttl              integer
 );
 
 create index idx_exchange_orders on "order" (exchange);

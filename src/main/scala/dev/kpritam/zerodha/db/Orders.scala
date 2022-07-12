@@ -21,6 +21,9 @@ trait Orders:
 object Orders:
   val live: ULayer[OrdersLive] = ZLayer.succeed(OrdersLive())
 
+  def create(order: Order): ZIO[Orders, SQLException, Long] =
+    ZIO.serviceWithZIO[Orders](_.create(order))
+
 case class OrdersLive() extends Orders:
   import QuillCtx.*
 

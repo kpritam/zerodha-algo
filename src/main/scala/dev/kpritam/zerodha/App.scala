@@ -22,7 +22,7 @@ import zio.json.EncoderOps
 
 object App extends ZIOAppDefault:
   private val kiteConnectLive =
-    ZLayer.fromFunction((cfg: KiteConfig) => KiteConnect(cfg.apiKey))
+    ZLayer.fromFunction((cfg: KiteConfig) => KiteConnect(cfg.apiKey, true))
 
   // zerodha kite login flow requires cookies to be passed along in redirects
   private val sttpBackend = ZLayer.succeed(

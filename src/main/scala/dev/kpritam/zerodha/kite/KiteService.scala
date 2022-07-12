@@ -54,8 +54,9 @@ case class KiteServiceLive(kiteClient: KiteClient, instruments: Instruments, ord
 
   def placeOrder(request: OrderRequest, variety: String): Task[Order] =
     for
-      order <- kiteClient.placeOrder(request, variety)
-      _     <- orders.create(order)
+      orderId <- kiteClient.placeOrder(request, variety)
+      order   <- kiteClient.getOrder(orderId)
+      _       <- orders.create(order)
     yield order
 
   private def findInstrument(instruments: List[Instrument], price: Double): Task[Instrument] =

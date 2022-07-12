@@ -20,10 +20,11 @@ trait KiteClient:
   def getLTP(request: QuoteRequest): Task[LTPQuote]
   def getLTPs(request: List[QuoteRequest]): Task[Map[QuoteRequest, LTPQuote]]
 
-  def modifyOrder(orderId: String, orderReq: OrderRequest, variety: String): Task[Order]
-  def placeOrder(orderReq: OrderRequest, variety: String): Task[Order]
+  def modifyOrder(orderId: String, orderReq: OrderRequest, variety: String): Task[String]
+  def placeOrder(orderReq: OrderRequest, variety: String): Task[String]
   def getOrders: Task[List[Order]]
   def getOrders(orderIds: List[String]): Task[List[Order]]
+  def getOrder(orderId: String): Task[Order]
 
 case class KiteClientLive(kiteConnect: KiteConnect) extends KiteClient:
   def getInstruments: Task[List[Instrument]] =
@@ -65,14 +66,19 @@ case class KiteClientLive(kiteConnect: KiteConnect) extends KiteClient:
       ltpQuotes <- mkQuoteRequestMap(map.toMap)
     yield ltpQuotes
 
-  def placeOrder(orderReq: OrderRequest, variety: String): Task[Order] =
-    ZIO.attemptBlocking(kiteConnect.placeOrder(orderReq.toZerodha, variety).toOrder)
+  def placeOrder(orderReq: OrderRequest, variety: String): Task[String] =
+    ZIO.attemptBlocking(kiteConnect.placeOrder(orderReq.toZerodha, variety).orderId)
 
-  def modifyOrder(orderId: String, orderReq: OrderRequest, variety: String): Task[Order] =
-    ZIO.attemptBlocking(kiteConnect.modifyOrder(orderId, orderReq.toZerodha, variety).toOrder)
+  def modifyOrder(orderId: String, orderReq: OrderRequest, variety: String): Task[String] =
+    ZIO.attemptBlocking(kiteConnect.modifyOrder(orderId, orderReq.toZerodha, variety).orderId)
 
   def getOrders: Task[List[Order]] =
     ZIO.attemptBlocking { kiteConnect.getOrders.asScala.toList.map(_.toOrder) }
+
+  def getOrder(orderId: String): Task[Order] =
+    ZIO.attemptBlocking {
+      kiteConnect.getOrderHistory(orderId).asScala.toList.maxBy(_.orderTimestamp).toOrder
+    }
 
   def getOrders(orderIds: List[String]): Task[List[Order]] =
     getOrders.map(_.filter(order => orderIds.contains(order.orderId)))
@@ -107,17 +113,20 @@ object KiteClient:
   def getLTPs(request: List[QuoteRequest]): RIO[KiteClient, Map[QuoteRequest, LTPQuote]] =
     ZIO.serviceWithZIO[KiteClient](_.getLTPs(request))
 
-  def placeOrder(orderReq: OrderRequest, variety: String): RIO[KiteClient, Order] =
+  def placeOrder(orderReq: OrderRequest, variety: String): RIO[KiteClient, String] =
     ZIO.serviceWithZIO[KiteClient](_.placeOrder(orderReq, variety))
 
   def modifyOrder(
       orderId: String,
       orderReq: OrderRequest,
       variety: String
-  ): RIO[KiteClient, Order] =
+  ): RIO[KiteClient, String] =
     ZIO.serviceWithZIO[KiteClient](_.modifyOrder(orderId, orderReq, variety))
 
   def getOrders: RIO[KiteClient, List[Order]] = ZIO.serviceWithZIO[KiteClient](_.getOrders)
 
   def getOrders(orderIds: List[String]): RIO[KiteClient, List[Order]] =
     ZIO.serviceWithZIO[KiteClient](_.getOrders(orderIds))
+
+  def getOrder(orderId: String): RIO[KiteClient, Order] =
+    ZIO.serviceWithZIO[KiteClient](_.getOrder(orderId))
