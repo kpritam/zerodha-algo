@@ -10,7 +10,7 @@ enum QuoteRequest:
 
   def instrument: String =
     this match
-      case Instrument(s, e)   => s"$s:$e"
+      case Instrument(s, e)   => s"$e:$s"
       case InstrumentToken(t) => t.toString
 
 object QuoteRequest:
