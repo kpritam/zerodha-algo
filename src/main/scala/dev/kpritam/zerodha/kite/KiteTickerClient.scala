@@ -15,16 +15,9 @@ import scala.jdk.CollectionConverters.{IterableHasAsJava, SeqHasAsJava}
 trait KiteTickerClient:
   def init: Task[Unit]
   def subscribe(tokens: List[lang.Long]): UStream[Order]
-  def shutdown: UIO[Unit]
 
 object KiteTickerClient:
   val live = ZLayer.fromFunction(KiteTickerLive.apply)
-
-  def live(user: User): ULayer[KiteTickerClient] = ZLayer.scoped(
-    ZIO.acquireRelease(
-      ZIO.succeed(KiteTickerLive(KiteTicker(user.accessToken, user.apiKey)))
-    )(_.shutdown)
-  )
 
   def init: RIO[KiteTickerClient, Unit] =
     ZIO.serviceWithZIO[KiteTickerClient](_.init)
@@ -47,8 +40,6 @@ case class KiteTickerLive(kiteTicker: KiteTicker) extends KiteTickerClient:
         kiteTicker.setOnOrderUpdateListener(zOrder => cb(ZIO.succeed(Chunk(Order.from(zOrder)))))
       }
 
-  def shutdown: UIO[Unit] = ZIO.succeed(kiteTicker.disconnect())
-
   private def onDisconnected =
     ZStream
       .async[Any, Nothing, Unit](cb =>
@@ -69,7 +60,7 @@ case class KiteTickerLive(kiteTicker: KiteTicker) extends KiteTickerClient:
 
   private def onError =
     ZStream
-      .async[Any, Nothing, Unit](cb =>
+      .async[Any, Nothing, Unit] { cb =>
         new ticker.OnError:
           override def onError(error: String): Unit =
             cb(ZIO.logError(s"Kite Ticker onError: $error)").as(Chunk.empty))
@@ -79,5 +70,5 @@ case class KiteTickerLive(kiteTicker: KiteTicker) extends KiteTickerClient:
 
           override def onError(error: KiteException): Unit =
             cb(ZIO.logErrorCause("Kite Ticker onError", Cause.fail(error)).as(Chunk.empty))
-      )
+      }
       .runDrain
