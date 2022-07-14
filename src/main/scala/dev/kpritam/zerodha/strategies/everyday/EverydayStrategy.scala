@@ -19,7 +19,7 @@ trait EverydayStrategy:
       quantity: Int
   ): Task[Unit]
 
-  def modifyPendingOrders(): Task[Unit]
+  def modifyPendingOrders: Task[List[String]]
 
 object EverydayStrategy:
   val live = ZLayer.fromFunction(EverydayStrategyLive.apply)
@@ -31,6 +31,9 @@ object EverydayStrategy:
       quantity: Int
   ): RIO[EverydayStrategy, Unit] =
     ZIO.serviceWithZIO[EverydayStrategy](_.sellBuyModifyOrder(exchange, name, expiryDay, quantity))
+
+  def modifyPendingOrders: RIO[EverydayStrategy, List[String]] =
+    ZIO.serviceWithZIO[EverydayStrategy](_.modifyPendingOrders)
 
 case class EverydayStrategyLive(
     kiteClient: KiteClient,
@@ -75,7 +78,12 @@ case class EverydayStrategyLive(
         yield ()
     yield ()
 
-  def modifyPendingOrders(): Task[Unit] = ???
+  def modifyPendingOrders: Task[List[String]] =
+    for
+      pendingOrders <- orders.getPendingSL
+      orders        <- kiteClient.getOrders(pendingOrders.map(_.orderId))
+      res           <- ZIO.foreachPar(orders)(o => modifyOrder(OrderRequest.from(o), o))
+    yield res
 
   private def runOrderCompletionTasks(
       orderReq: OrderRequest,
@@ -93,10 +101,13 @@ case class EverydayStrategyLive(
                    _ <- ZIO.sleep(1.second)
                    s <- state.get.tap(s => ZIO.logDebug("[2] Current State: " + s))
                    _ <- ZIO.whenCase(Some(o.orderId)) {
-                          case s.ceOrderId   => placeSLOrder(orderReq, o, state.updateCeSL)
-                          case s.peOrderId   => placeSLOrder(orderReq, o, state.updatePeSL)
-                          case s.ceSLOrderId => modifyOrder(orderReq, s.peOrder)
-                          case s.peSLOrderId => modifyOrder(orderReq, s.ceOrder)
+                          case s.ceOrderId => placeSLOrder(orderReq, o, state.updateCeSL)
+                          case s.peOrderId => placeSLOrder(orderReq, o, state.updatePeSL)
+
+                          case s.ceSLOrderId if s.peOrder.nonEmpty =>
+                            modifyOrder(orderReq, s.peOrder.get)
+                          case s.peSLOrderId if s.ceOrder.nonEmpty =>
+                            modifyOrder(orderReq, s.ceOrder.get)
                         }
                  yield ()
                }
@@ -115,17 +126,20 @@ case class EverydayStrategyLive(
       _          <- ZIO.logDebug(s"SL order placed: $res")
     yield res
 
-  private def modifyOrder(orderReq: OrderRequest, order: Option[Order]) =
+  private def modifyOrder(orderReq: OrderRequest, order: Order) =
     for
       _          <- ZIO.logDebug(s"Modifying order: $order")
-      o          <- ZIO.getOrFail(order)
-      quote      <- kiteClient.getQuote(QuoteRequest.from(o))
-      _          <- ZIO.when(quote.lastPrice * 2.5 > o.price)(
-                      ZIO.fail(LastPriceExceeds(quote.lastPrice, o.price))
+      quote      <- kiteClient.getQuote(QuoteRequest.from(order))
+      _          <- ZIO.when(quote.lastPrice * 2.5 > order.price)(
+                      ZIO.fail(LastPriceExceeds(quote.lastPrice, order.price))
                     )
       (tp, price) = triggerPriceAndPrice(quote.lastPrice, quote)
       res        <-
-        kiteClient.modifyOrder(o.orderId, orderReq.toSLBuy(tp, price, o.tradingSymbol), regular)
+        kiteClient.modifyOrder(
+          order.orderId,
+          orderReq.toSLBuy(tp, price, order.tradingSymbol),
+          regular
+        )
       _          <- ZIO.logDebug(s"Order modified: $res")
     yield res
 

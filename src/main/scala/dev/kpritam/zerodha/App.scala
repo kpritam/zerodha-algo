@@ -8,13 +8,25 @@ import dev.kpritam.zerodha.kite.{KiteClient, KiteConfig, KiteService, KiteTicker
 import dev.kpritam.zerodha.kite.login.{KiteLogin, Totp}
 import dev.kpritam.zerodha.kite.models.Exchange
 import dev.kpritam.zerodha.strategies.everyday.EverydayStrategy
+import dev.kpritam.zerodha.cron.*
 
 import zio.*
 
 object App extends ZIOAppDefault:
 
   def run: ZIO[Any, Any, Any] =
-    program
+    (for
+      f1 <- sellBuyModifyOrder.catchAndLog("Strategy failed").schedule(everyMorning9_30).fork
+      f2 <- EverydayStrategy.modifyPendingOrders
+              .catchAndLog("[1:30] Modify failed")
+              .schedule(everyNoon1_30)
+              .fork
+      f3 <- EverydayStrategy.modifyPendingOrders
+              .catchAndLog("[2:30] Modify failed")
+              .schedule(everyNoon2_30)
+              .fork
+      _  <- f1.zip(f2).zip(f3).await
+    yield ())
       .provide(
         logging.console(logLevel = LogLevel.All),
         Totp.live,
@@ -36,7 +48,7 @@ object App extends ZIOAppDefault:
         EverydayStrategy.live
       )
 
-  private def program =
+  private def sellBuyModifyOrder =
     KiteTickerClient.init *> EverydayStrategy
       .sellBuyModifyOrder(
         exchange = Exchange("NFO"),
@@ -44,3 +56,10 @@ object App extends ZIOAppDefault:
         expiryDay = Calendar.THURSDAY,
         quantity = 50
       )
+
+extension [R, E, A](zio: ZIO[R, E, A])
+  def catchAndLog(msg: String) =
+    zio
+      .catchAll(e => ZIO.logErrorCause(msg, Cause.fail(e)).unit)
+      .catchAllCause(e => ZIO.logErrorCause(msg, e).unit)
+      .catchAllDefect(e => ZIO.logErrorCause(msg, Cause.fail(e)).unit)

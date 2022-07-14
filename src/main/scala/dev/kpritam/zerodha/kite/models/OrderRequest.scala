@@ -45,6 +45,21 @@ case class OrderRequest(
     orderParams.icebergLegs = icebergLegs
     orderParams
 
+object OrderRequest:
+  def from(o: Order): OrderRequest =
+    OrderRequest(
+      o.exchange,
+      o.tradingSymbol,
+      o.transactionType,
+      o.quantity.toInt,
+      o.price,
+      o.product,
+      o.orderType,
+      o.validity,
+      o.disclosedQuantity.toInt,
+      o.triggerPrice
+    )
+
 extension (req: OrderRequest)
   def toSLBuy(triggerPrice: Double, price: Double, tradingSymbol: String): OrderRequest =
     req.copy(
