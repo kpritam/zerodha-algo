@@ -70,7 +70,7 @@ case class KiteTickerLive(kiteTicker: KiteTicker) extends KiteTickerClient:
   private def onError =
     ZStream
       .async[Any, Nothing, Unit](cb =>
-        new ticker.OnError {
+        new ticker.OnError:
           override def onError(error: String): Unit =
             cb(ZIO.logError(s"Kite Ticker onError: $error)").as(Chunk.empty))
 
@@ -79,6 +79,5 @@ case class KiteTickerLive(kiteTicker: KiteTicker) extends KiteTickerClient:
 
           override def onError(error: KiteException): Unit =
             cb(ZIO.logErrorCause("Kite Ticker onError", Cause.fail(error)).as(Chunk.empty))
-        }
       )
       .runDrain

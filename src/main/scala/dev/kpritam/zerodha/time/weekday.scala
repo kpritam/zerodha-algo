@@ -10,4 +10,4 @@ def nextWeekday(nextDayOfWeek: Int): LocalDate =
   cal.add(Calendar.WEEK_OF_YEAR, 1)
   val nextWeek = cal.getTime.toIndiaLocalDate
   val now      = LocalDate.now(indiaZone)
-  if now.isBefore(curWeek) then curWeek else nextWeek
+  if now.isEqual(curWeek) || now.isBefore(curWeek) then curWeek else nextWeek

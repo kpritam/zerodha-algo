@@ -28,7 +28,7 @@ lazy val root = project
     libraryDependencies += "com.softwaremill.sttp.client3" %% "zio-json" % sttpVersion,
 
     // db & quill
-    libraryDependencies += "io.getquill" %% "quill-jdbc-zio" % "4.0.0",
+    libraryDependencies += "io.getquill" %% "quill-jdbc-zio" % "4.1.0-V2",
     libraryDependencies += "org.xerial"   % "sqlite-jdbc"    % "3.36.0.3",
 
     // kite
