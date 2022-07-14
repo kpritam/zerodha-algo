@@ -1,7 +1,7 @@
 package dev.kpritam.zerodha.strategies.everyday
 
 import com.zerodhatech.models.User
-import dev.kpritam.zerodha.db.Instruments
+import dev.kpritam.zerodha.db.{Instruments, Orders}
 import dev.kpritam.zerodha.kite.*
 import dev.kpritam.zerodha.kite.models.*
 import dev.kpritam.zerodha.time.{indiaZone, nextWeekday}
@@ -35,8 +35,8 @@ object EverydayStrategy:
 case class EverydayStrategyLive(
     kiteClient: KiteClient,
     kiteService: KiteService,
-    kiteTickerClient: KiteTickerClient,
-    instruments: Instruments
+    instruments: Instruments,
+    orders: Orders
 ) extends EverydayStrategy:
   def sellBuyModifyOrder(
       exchange: Exchange,
@@ -53,18 +53,16 @@ case class EverydayStrategyLive(
       cepe <- kiteService.getCEPEInstrument(instrumentRequest, price)
       _    <- ZIO.logInfo(s"Selected instruments: ${cepe.toJson}")
 
-      _ <-
+      orderReq = OrderRequest(
+                   exchange = exchange.toString,
+                   validity = "DAY",
+                   product = "NRML",
+                   orderType = "MARKET",
+                   transactionType = "SELL",
+                   quantity = quantity
+                 )
+      _       <-
         for
-          _       <- kiteTickerClient.init
-          orderReq = OrderRequest(
-                       exchange = exchange.toString,
-                       validity = "DAY",
-                       product = "NRML",
-                       orderType = "MARKET",
-                       transactionType = "SELL",
-                       quantity = quantity
-                     )
-
           f1 <- runOrderCompletionTasks(orderReq, cepe.tokens, state).fork
           _  <- ZIO.sleep(1.seconds)
 
@@ -86,8 +84,8 @@ case class EverydayStrategyLive(
   ) =
     for
       _   <- ZIO.logDebug(s"Subscribing to tokens: ${tokens.mkString(", ")}")
-      res <- kiteTickerClient
-               .subscribe(tokens)
+      res <- kiteService
+               .subscribeOrders(tokens)
                .filter(_.completed)
                .mapZIO { o =>
                  for

@@ -5,7 +5,9 @@ import dev.kpritam.zerodha.db.{Instruments, Orders}
 import java.util.Date
 import dev.kpritam.zerodha.kite.models.*
 import zio.*
+import zio.stream.UStream
 
+import java.lang
 import java.sql.SQLException
 import javax.sql.DataSource
 
@@ -14,6 +16,8 @@ trait KiteService:
   def getCEPEInstrument(request: InstrumentRequest, price: Double): Task[CEPEInstrument]
   def seedInstruments(request: InstrumentRequest): Task[List[Long]]
   def placeOrder(request: OrderRequest, variety: String): Task[Order]
+
+  def subscribeOrders(tokens: List[lang.Long]): UStream[Order]
 
 object KiteService:
   val live = ZLayer.fromFunction(KiteServiceLive.apply)
@@ -33,8 +37,12 @@ object KiteService:
   def placeOrder(request: OrderRequest, variety: String): RIO[KiteService, Order] =
     ZIO.serviceWithZIO[KiteService](_.placeOrder(request, variety))
 
-case class KiteServiceLive(kiteClient: KiteClient, instruments: Instruments, orders: Orders)
-    extends KiteService:
+case class KiteServiceLive(
+    kiteClient: KiteClient,
+    kiteTickerClient: KiteTickerClient,
+    instruments: Instruments,
+    orders: Orders
+) extends KiteService:
   def getInstrumentsWithLTP(request: InstrumentRequest): Task[List[Instrument]] =
     def token(i: Instrument) = QuoteRequest.InstrumentToken(i.instrumentToken)
     for
@@ -61,3 +69,14 @@ case class KiteServiceLive(kiteClient: KiteClient, instruments: Instruments, ord
 
   private def findInstrument(instruments: List[Instrument], price: Double): Task[Instrument] =
     ZIO.getOrFail(instruments.minByOption(i => math.abs(i.lastPrice - price)))
+
+  def subscribeOrders(tokens: List[lang.Long]): UStream[Order] =
+    kiteTickerClient
+      .subscribe(tokens)
+      .tap(o =>
+        orders
+          .update(o)
+          .catchAll(e =>
+            ZIO.logErrorCause(s"Failed to update OrderId: ${o.orderId}", Cause.fail(e))
+          )
+      )

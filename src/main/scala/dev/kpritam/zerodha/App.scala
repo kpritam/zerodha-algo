@@ -37,7 +37,7 @@ object App extends ZIOAppDefault:
       )
 
   private def program =
-    EverydayStrategy
+    KiteTickerClient.init *> EverydayStrategy
       .sellBuyModifyOrder(
         exchange = Exchange("NFO"),
         name = "NIFTY",
