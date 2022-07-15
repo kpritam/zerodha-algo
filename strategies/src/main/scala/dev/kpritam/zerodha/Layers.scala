@@ -5,7 +5,8 @@ import com.zerodhatech.models.User
 import com.zerodhatech.ticker.KiteTicker
 import dev.kpritam.zerodha.kite.KiteConfig
 import dev.kpritam.zerodha.kite.login.KiteLogin
-import sttp.client3.{FollowRedirectsBackend, HttpClientSyncBackend}
+import sttp.client3.FollowRedirectsBackend
+import sttp.client3.HttpClientSyncBackend
 import zio.*
 
 //noinspection TypeAnnotation

@@ -4,7 +4,9 @@ import com.zerodhatech.models.Instrument as ZInstrument
 import dev.kpritam.zerodha.kite.time.*
 import zio.json.*
 
-import java.time.{LocalDate, LocalDateTime, ZoneId}
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.Date
 
 case class Instrument(

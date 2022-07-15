@@ -1,7 +1,8 @@
 package dev.kpritam.zerodha.strategies.everyday
 
 import com.zerodhatech.models.User
-import dev.kpritam.zerodha.db.{Instruments, Orders}
+import dev.kpritam.zerodha.db.Instruments
+import dev.kpritam.zerodha.db.Orders
 import dev.kpritam.zerodha.kite.*
 import dev.kpritam.zerodha.kite.models.*
 import dev.kpritam.zerodha.kite.time.indiaZone

@@ -1,13 +1,15 @@
 package dev.kpritam.zerodha.kite
 
 import com.zerodhatech.kiteconnect.KiteConnect
-import com.zerodhatech.models.{LTPQuote, Quote}
+import com.zerodhatech.models.LTPQuote
+import com.zerodhatech.models.Quote
 import dev.kpritam.zerodha.kite.models.*
 import zio.*
 
 import java.time.Instant
 import java.util.Date
-import scala.jdk.CollectionConverters.{CollectionHasAsScala, MapHasAsScala}
+import scala.jdk.CollectionConverters.CollectionHasAsScala
+import scala.jdk.CollectionConverters.MapHasAsScala
 
 trait KiteClient:
   def getInstruments: IO[KiteError, List[Instrument]]
@@ -28,7 +30,7 @@ trait KiteClient:
 
 case class KiteClientLive(kiteConnect: KiteConnect) extends KiteClient:
   def getInstruments: IO[KiteError, List[Instrument]] =
-    attemptBlocking { kiteConnect.getInstruments.asScala.toList.map(Instrument.from) }
+    attemptBlocking(kiteConnect.getInstruments.asScala.toList.map(Instrument.from))
 
   def getInstruments(exchange: Exchange): IO[KiteError, List[Instrument]] =
     attemptBlocking {
@@ -74,7 +76,7 @@ case class KiteClientLive(kiteConnect: KiteConnect) extends KiteClient:
     attemptBlocking(kiteConnect.modifyOrder(orderId, orderReq.toZerodha, variety).orderId)
 
   def getOrders: IO[KiteError, List[Order]] =
-    attemptBlocking { kiteConnect.getOrders.asScala.toList.map(_.toOrder) }
+    attemptBlocking(kiteConnect.getOrders.asScala.toList.map(_.toOrder))
 
   def getOrder(orderId: String): IO[KiteError, Order] =
     attemptBlocking {

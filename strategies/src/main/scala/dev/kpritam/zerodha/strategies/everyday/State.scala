@@ -1,7 +1,8 @@
 package dev.kpritam.zerodha.strategies.everyday
 
 import dev.kpritam.zerodha.kite.models.Order
-import zio.{Ref, UIO}
+import zio.Ref
+import zio.UIO
 
 case class State(
     ceOrder: Option[Order] = None,

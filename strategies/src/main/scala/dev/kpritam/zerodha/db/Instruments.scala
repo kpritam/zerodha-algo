@@ -1,8 +1,8 @@
 package dev.kpritam.zerodha.db
 
 import dev.kpritam.zerodha.kite.models.Instrument
-import zio.*
 import io.getquill.*
+import zio.*
 
 import java.sql.SQLException
 

@@ -2,7 +2,8 @@ package dev.kpritam.zerodha.utils
 
 import com.zerodhatech.models.Quote
 
-import scala.math.{min, round}
+import scala.math.min
+import scala.math.round
 
 def triggerPrice(price: Double) =
   round(price * 2.5 / 0.05) * 0.05

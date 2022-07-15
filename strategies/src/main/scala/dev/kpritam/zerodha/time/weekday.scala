@@ -1,8 +1,10 @@
 package dev.kpritam.zerodha.time
 
-import dev.kpritam.zerodha.kite.time.{indiaZone, toIndiaLocalDate}
+import dev.kpritam.zerodha.kite.time.indiaZone
+import dev.kpritam.zerodha.kite.time.toIndiaLocalDate
 
-import java.time.{LocalDate, ZoneId}
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Calendar
 
 def nextWeekday(nextDayOfWeek: Int): LocalDate =

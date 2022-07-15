@@ -5,7 +5,6 @@ import com.zerodhatech.models.User
 import dev.kpritam.zerodha.kite.KiteConfig
 import sttp.client3.*
 import sttp.client3.ziojson.*
-
 import sttp.model.headers.CookieWithMeta
 import zio.*
 import zio.json.*

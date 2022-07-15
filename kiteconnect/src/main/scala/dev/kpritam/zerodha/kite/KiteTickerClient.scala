@@ -10,7 +10,8 @@ import zio.*
 import zio.stream.*
 
 import java.lang
-import scala.jdk.CollectionConverters.{IterableHasAsJava, SeqHasAsJava}
+import scala.jdk.CollectionConverters.IterableHasAsJava
+import scala.jdk.CollectionConverters.SeqHasAsJava
 
 trait KiteTickerClient:
   def init: Task[Unit]

@@ -1,12 +1,19 @@
 val scala3Version = "3.1.3"
 
-ThisBuild / scalaVersion := scala3Version
-ThisBuild / version      := "0.1.0-SNAPSHOT"
-ThisBuild / fork         := true
-ThisBuild / scalacOptions ++= Seq(
-  "-explain",
-  "-indent",
-  "-new-syntax"
+inThisBuild(
+  List(
+    scalaVersion                                   := scala3Version,
+    version                                        := "0.1.0-SNAPSHOT",
+    fork                                           := true,
+    scalacOptions ++= Seq(
+      "-explain",
+      "-indent",
+      "-new-syntax"
+    ),
+    semanticdbEnabled                              := true,
+    semanticdbVersion                              := scalafixSemanticdb.revision,
+    scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.6.0"
+  )
 )
 
 lazy val root = project

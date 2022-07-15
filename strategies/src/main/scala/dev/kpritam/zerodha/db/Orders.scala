@@ -1,12 +1,15 @@
 package dev.kpritam.zerodha.db
 
-import dev.kpritam.zerodha.kite.models.{Instrument, Order}
+import dev.kpritam.zerodha.kite.models.Instrument
+import dev.kpritam.zerodha.kite.models.Order
+import io.getquill._
+import io.getquill.updateValue
 import zio.*
-import io.getquill.{updateValue, *}
-import QuillCtx.*
 
 import java.sql.SQLException
 import javax.sql.DataSource
+
+import QuillCtx.*
 
 val pendingStatus = "TRIGGER PENDING"
 val slOrderType   = "SL"

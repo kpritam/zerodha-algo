@@ -1,16 +1,20 @@
 package dev.kpritam.zerodha
 
-import java.util.Calendar
-
 import dev.kpritam.zerodha.Layers
-import dev.kpritam.zerodha.db.{Instruments, Orders}
-import dev.kpritam.zerodha.kite.{KiteClient, KiteConfig, KiteService, KiteTickerClient}
-import dev.kpritam.zerodha.kite.login.{KiteLogin, Totp}
+import dev.kpritam.zerodha.cron.*
+import dev.kpritam.zerodha.db.Instruments
+import dev.kpritam.zerodha.db.Orders
+import dev.kpritam.zerodha.kite.KiteClient
+import dev.kpritam.zerodha.kite.KiteConfig
+import dev.kpritam.zerodha.kite.KiteService
+import dev.kpritam.zerodha.kite.KiteTickerClient
+import dev.kpritam.zerodha.kite.login.KiteLogin
+import dev.kpritam.zerodha.kite.login.Totp
 import dev.kpritam.zerodha.kite.models.Exchange
 import dev.kpritam.zerodha.strategies.everyday.EverydayStrategy
-import dev.kpritam.zerodha.cron.*
-
 import zio.*
+
+import java.util.Calendar
 
 object App extends ZIOAppDefault:
 

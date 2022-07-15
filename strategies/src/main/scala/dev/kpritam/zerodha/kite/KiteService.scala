@@ -1,15 +1,15 @@
 package dev.kpritam.zerodha.kite
 
-import dev.kpritam.zerodha.db.{Instruments, Orders}
+import dev.kpritam.zerodha.db.Instruments
+import dev.kpritam.zerodha.db.Orders
 import dev.kpritam.zerodha.getLastPriceOrZero
-
-import java.util.Date
 import dev.kpritam.zerodha.kite.models.*
 import zio.*
 import zio.stream.UStream
 
 import java.lang
 import java.sql.SQLException
+import java.util.Date
 import javax.sql.DataSource
 
 trait KiteService:

@@ -2,8 +2,8 @@ package dev.kpritam.zerodha.kite
 
 import zio.*
 import zio.config.*
-import zio.config.magnolia.*
 import zio.config.magnolia.Descriptor.*
+import zio.config.magnolia.*
 
 case class KiteConfig(
     apiKey: String,

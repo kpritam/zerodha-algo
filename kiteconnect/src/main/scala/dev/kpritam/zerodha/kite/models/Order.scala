@@ -1,8 +1,10 @@
 package dev.kpritam.zerodha.kite.models
 
-import com.zerodhatech.models.{Quote, Order as ZOrder}
+import com.zerodhatech.models.Quote
+import com.zerodhatech.models.{Order => ZOrder}
 
-import java.util.{Date, Map}
+import java.util.Date
+import java.util.Map
 import scala.math.round
 
 case class Order(
