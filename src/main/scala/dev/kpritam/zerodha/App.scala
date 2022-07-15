@@ -57,9 +57,6 @@ object App extends ZIOAppDefault:
         quantity = 50
       )
 
-extension [R, E, A](zio: ZIO[R, E, A])
+extension [R, E <: Throwable, A](zio: ZIO[R, E, A])
   def catchAndLog(msg: String) =
-    zio
-      .catchAll(e => ZIO.logErrorCause(msg, Cause.fail(e)).unit)
-      .catchAllCause(e => ZIO.logErrorCause(msg, e).unit)
-      .catchAllDefect(e => ZIO.logErrorCause(msg, Cause.fail(e)).unit)
+    zio.catchAll(e => ZIO.logError(s"$msg: ${e.getMessage}").unit)
