@@ -34,11 +34,16 @@ case class KiteTickerLive(kiteTicker: KiteTicker) extends KiteTickerClient:
     yield ()
 
   def subscribe(tokens: List[lang.Long]): UStream[Order] =
-    kiteTicker.subscribe(java.util.ArrayList[lang.Long](tokens.asJava))
+    val jTokens = java.util.ArrayList[lang.Long](tokens.asJava)
+    kiteTicker.subscribe(jTokens)
     ZStream
-      .async { cb =>
+      .async[Any, Nothing, Order] { cb =>
         kiteTicker.setOnOrderUpdateListener(zOrder => cb(ZIO.succeed(Chunk(Order.from(zOrder)))))
       }
+      .ensuring(
+        ZIO.logDebug(s"Unsubscribing token: ${tokens.mkString(",")}") *> ZIO
+          .succeed(kiteTicker.unsubscribe(jTokens))
+      )
 
   private def onDisconnected =
     ZStream

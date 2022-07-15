@@ -94,23 +94,24 @@ case class EverydayStrategyLive(
       _   <- ZIO.logDebug(s"Subscribing to tokens: ${tokens.mkString(", ")}")
       res <- kiteService
                .subscribeOrders(tokens)
-               .filter(_.completed)
-               .mapZIO { o =>
-                 for
-                   _ <- ZIO.logDebug(s"[1] Order completed: $o")
-                   _ <- ZIO.sleep(1.second)
-                   s <- state.get.tap(s => ZIO.logDebug("[2] Current State: " + s))
-                   _ <- ZIO.whenCase(Some(o.orderId)) {
-                          case s.ceOrderId => placeSLOrder(orderReq, o, state.updateCeSL)
-                          case s.peOrderId => placeSLOrder(orderReq, o, state.updatePeSL)
+               .collectZIO {
+                 case o if o.completed =>
+                   for
+                     _ <- ZIO.logDebug(s"[1] Order completed: $o")
+                     _ <- ZIO.sleep(1.second)
+                     s <- state.get.tap(s => ZIO.logDebug("[2] Current State: " + s))
+                     _ <- ZIO.whenCase(Some(o.orderId)) {
+                            case s.ceOrderId => placeSLOrder(orderReq, o, state.updateCeSL)
+                            case s.peOrderId => placeSLOrder(orderReq, o, state.updatePeSL)
 
-                          case s.ceSLOrderId if s.peOrder.nonEmpty =>
-                            modifyOrder(orderReq, s.peOrder.get)
-                          case s.peSLOrderId if s.ceOrder.nonEmpty =>
-                            modifyOrder(orderReq, s.ceOrder.get)
-                        }
-                 yield ()
+                            case s.ceSLOrderId if s.peOrder.nonEmpty =>
+                              modifyOrder(orderReq, s.peOrder.get)
+                            case s.peSLOrderId if s.ceOrder.nonEmpty =>
+                              modifyOrder(orderReq, s.ceOrder.get)
+                          }
+                   yield ()
                }
+               .take(4)
                .runDrain
     yield res
 
