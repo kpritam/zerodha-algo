@@ -18,21 +18,25 @@ val twofaURL        = baseURL + "/api/twofa"
 val connectLoginURL = baseURL + "/connect/login"
 
 trait KiteLogin:
-  def login: Task[String]
+  def requestToken: Task[String]
   def loginManual: Task[String]
+  def login: Task[User]
   def createSession(requestToken: String): Task[User]
 
 object KiteLogin:
   val live = ZLayer.fromFunction(KiteLoginLive.apply)
 
-  def login: RIO[KiteLogin, String] =
-    ZIO.serviceWithZIO[KiteLogin](_.login)
+  def requestToken: RIO[KiteLogin, String] =
+    ZIO.serviceWithZIO[KiteLogin](_.requestToken)
 
-  def getRequestToken: RIO[KiteLogin, String] =
+  def loginManual: RIO[KiteLogin, String] =
     ZIO.serviceWithZIO[KiteLogin](_.loginManual)
 
   def createSession(requestToken: String): RIO[KiteLogin, User] =
     ZIO.serviceWithZIO[KiteLogin](_.createSession(requestToken))
+
+  def login: RIO[KiteLogin, User] =
+    ZIO.serviceWithZIO[KiteLogin](_.login)
 
 case class KiteLoginLive(
     kiteConnect: KiteConnect,
@@ -40,7 +44,7 @@ case class KiteLoginLive(
     totp: Totp,
     backend: SttpBackend[Identity, Any]
 ) extends KiteLogin:
-  def login: Task[String] =
+  def requestToken: Task[String] =
     for
       loginRes     <- post[LoginResponse](loginURL, loginRequest)
       loginResBody <- ZIO.fromEither(loginRes.body)
@@ -64,6 +68,9 @@ case class KiteLoginLive(
       user <- ZIO.attemptBlocking(kiteConnect.generateSession(requestToken, kiteConfig.apiSecret))
       _    <- ZIO.succeed(kiteConnect.setAccessToken(user.accessToken))
     } yield user
+
+  def login: Task[User] =
+    requestToken.flatMap(createSession)
 
   private def post[T: zio.json.JsonDecoder](
       url: String,

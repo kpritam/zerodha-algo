@@ -3,6 +3,7 @@ package dev.kpritam.zerodha.kite
 import com.zerodhatech.kiteconnect.KiteConnect
 import com.zerodhatech.models.LTPQuote
 import com.zerodhatech.models.Quote
+import dev.kpritam.zerodha.kite.login.KiteLogin
 import dev.kpritam.zerodha.kite.models.*
 import zio.*
 
@@ -12,50 +13,52 @@ import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.jdk.CollectionConverters.MapHasAsScala
 
 trait KiteClient:
-  def getInstruments: IO[KiteError, List[Instrument]]
-  def getInstruments(exchange: Exchange): IO[KiteError, List[Instrument]]
-  def getInstruments(request: InstrumentRequest): IO[KiteError, List[Instrument]]
+  def getInstruments: Task[List[Instrument]]
+  def getInstruments(exchange: Exchange): Task[List[Instrument]]
+  def getInstruments(request: InstrumentRequest): Task[List[Instrument]]
 
-  def getQuote(request: QuoteRequest): IO[KiteError, Quote]
-  def getQuotes(request: List[QuoteRequest]): IO[KiteError, Map[QuoteRequest, Quote]]
+  def getQuote(request: QuoteRequest): Task[Quote]
+  def getQuotes(request: List[QuoteRequest]): Task[Map[QuoteRequest, Quote]]
 
-  def getLTP(request: QuoteRequest): IO[KiteError, LTPQuote]
-  def getLTPs(request: List[QuoteRequest]): IO[KiteError, Map[QuoteRequest, LTPQuote]]
+  def getLTP(request: QuoteRequest): Task[LTPQuote]
+  def getLTPs(request: List[QuoteRequest]): Task[Map[QuoteRequest, LTPQuote]]
 
-  def modifyOrder(orderId: String, orderReq: OrderRequest, variety: String): IO[KiteError, String]
-  def placeOrder(orderReq: OrderRequest, variety: String): IO[KiteError, String]
-  def getOrders: IO[KiteError, List[Order]]
-  def getOrders(orderIds: List[String]): IO[KiteError, List[Order]]
-  def getOrder(orderId: String): IO[KiteError, Order]
+  def modifyOrder(orderId: String, orderReq: OrderRequest, variety: String): Task[String]
+  def placeOrder(orderReq: OrderRequest, variety: String): Task[String]
+  def getOrders: Task[List[Order]]
+  def getOrders(orderIds: List[String]): Task[List[Order]]
+  def getOrder(orderId: String): Task[Order]
 
-case class KiteClientLive(kiteConnect: KiteConnect) extends KiteClient:
-  def getInstruments: IO[KiteError, List[Instrument]] =
-    attemptBlocking(kiteConnect.getInstruments.asScala.toList.map(Instrument.from))
+case class KiteClientLive(kiteConnect: KiteConnect, login: KiteLogin) extends KiteClient:
+  def getInstruments: Task[List[Instrument]] =
+    attemptBlockingWithRetry(kiteConnect.getInstruments.asScala.toList.map(Instrument.from))
 
-  def getInstruments(exchange: Exchange): IO[KiteError, List[Instrument]] =
-    attemptBlocking {
+  def getInstruments(exchange: Exchange): Task[List[Instrument]] =
+    attemptBlockingWithRetry {
       kiteConnect.getInstruments(exchange.toString).asScala.toList.map(Instrument.from)
     }
 
-  def getInstruments(request: InstrumentRequest): IO[KiteError, List[Instrument]] =
+  def getInstruments(request: InstrumentRequest): Task[List[Instrument]] =
     getInstruments(request.exchange).map(
       _.filter(i => i.name == request.name && i.expiryDateEquals(request.expiryDate))
     )
 
-  def getQuote(request: QuoteRequest): IO[KiteError, Quote] =
+  def getQuote(request: QuoteRequest): Task[Quote] =
     for
       quotes <- getQuotes(List(request))
       token  <- QuoteRequest.from(request.instrument)
       quote  <- ZIO.getOrFailWith(KiteError.QuoteNoteFound(request.instrument))(quotes.get(token))
     yield quote
 
-  def getQuotes(request: List[QuoteRequest]): IO[KiteError, Map[QuoteRequest, Quote]] =
+  def getQuotes(request: List[QuoteRequest]): Task[Map[QuoteRequest, Quote]] =
     for
-      map    <- attemptBlocking(kiteConnect.getQuote(request.map(_.instrument).toArray).asScala)
+      map    <- attemptBlockingWithRetry(
+                  kiteConnect.getQuote(request.map(_.instrument).toArray).asScala
+                )
       quotes <- mkQuoteRequestMap(map.toMap)
     yield quotes
 
-  def getLTP(request: QuoteRequest): IO[KiteError, LTPQuote] =
+  def getLTP(request: QuoteRequest): Task[LTPQuote] =
     for
       ltpQuotes <- getLTPs(List(request))
       quote     <- QuoteRequest.from(request.instrument)
@@ -63,27 +66,27 @@ case class KiteClientLive(kiteConnect: KiteConnect) extends KiteClient:
         ZIO.getOrFailWith(KiteError.QuoteNoteFound(request.instrument))(ltpQuotes.get(quote))
     yield ltpQuote
 
-  def getLTPs(request: List[QuoteRequest]): IO[KiteError, Map[QuoteRequest, LTPQuote]] =
+  def getLTPs(request: List[QuoteRequest]): Task[Map[QuoteRequest, LTPQuote]] =
     for
-      map       <- attemptBlocking(kiteConnect.getLTP(request.map(_.instrument).toArray).asScala)
+      map       <- attemptBlockingWithRetry(kiteConnect.getLTP(request.map(_.instrument).toArray).asScala)
       ltpQuotes <- mkQuoteRequestMap(map.toMap)
     yield ltpQuotes
 
-  def placeOrder(orderReq: OrderRequest, variety: String): IO[KiteError, String] =
-    attemptBlocking(kiteConnect.placeOrder(orderReq.toZerodha, variety).orderId)
+  def placeOrder(orderReq: OrderRequest, variety: String): Task[String] =
+    attemptBlockingWithRetry(kiteConnect.placeOrder(orderReq.toZerodha, variety).orderId)
 
-  def modifyOrder(orderId: String, orderReq: OrderRequest, variety: String): IO[KiteError, String] =
-    attemptBlocking(kiteConnect.modifyOrder(orderId, orderReq.toZerodha, variety).orderId)
+  def modifyOrder(orderId: String, orderReq: OrderRequest, variety: String): Task[String] =
+    attemptBlockingWithRetry(kiteConnect.modifyOrder(orderId, orderReq.toZerodha, variety).orderId)
 
-  def getOrders: IO[KiteError, List[Order]] =
-    attemptBlocking(kiteConnect.getOrders.asScala.toList.map(_.toOrder))
+  def getOrders: Task[List[Order]] =
+    attemptBlockingWithRetry(kiteConnect.getOrders.asScala.toList.map(_.toOrder))
 
-  def getOrder(orderId: String): IO[KiteError, Order] =
-    attemptBlocking {
+  def getOrder(orderId: String): Task[Order] =
+    attemptBlockingWithRetry {
       kiteConnect.getOrderHistory(orderId).asScala.toList.maxBy(_.orderTimestamp).toOrder
     }
 
-  def getOrders(orderIds: List[String]): IO[KiteError, List[Order]] =
+  def getOrders(orderIds: List[String]): Task[List[Order]] =
     getOrders.map(_.filter(order => orderIds.contains(order.orderId)))
 
   private def mkQuoteRequestMap[T](
@@ -94,8 +97,17 @@ case class KiteClientLive(kiteConnect: KiteConnect) extends KiteClient:
   private def attemptBlocking[A](effect: => A): IO[KiteError, A] =
     ZIO.attemptBlocking(effect).mapError(KiteError(_))
 
+  private def attemptBlockingWithRetry[A](effect: => A): Task[A] =
+    attemptBlocking(effect).catchSome { case KiteError.SessionExpired(msg, _) =>
+      for
+        _   <- ZIO.logWarning(s"Session expired. Logging in again. Error: $msg")
+        _   <- login.login.map(user => kiteConnect.setAccessToken(user.accessToken))
+        res <- attemptBlocking(effect)
+      yield res
+    }
+
 object KiteClient:
-  val live: ZLayer[KiteConnect, Nothing, KiteClientLive] =
+  val live: ZLayer[KiteConnect & KiteLogin, Nothing, KiteClientLive] =
     ZLayer.fromFunction(KiteClientLive.apply)
 
   def getInstruments: RIO[KiteClient, List[Instrument]] =

@@ -20,11 +20,7 @@ object Layers {
   )
 
   val userSession =
-    for
-      requestToken <- KiteLogin.login
-      user         <- KiteLogin.createSession(requestToken)
-      _            <- ZIO.logInfo(s"${user.userName} logged in successfully.")
-    yield user
+    KiteLogin.login.tap(user => ZIO.logInfo(s"${user.userName} logged in successfully."))
 
   val kiteTickerLive =
     ZLayer.scoped(

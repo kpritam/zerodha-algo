@@ -46,6 +46,7 @@ lazy val kiteconnect = project
       ZIO.config,
       ZIO.configMagnolia,
       Sttp.core,
+      Sttp.zio,
       Sttp.zioJson
     )
   )

@@ -14,9 +14,10 @@ object ZIO {
 
 }
 object Sttp {
-  private val version = "3.6.2"
+  private val version = "3.7.0"
 
   val core    = "com.softwaremill.sttp.client3" %% "core"     % version
+  val zio     = "com.softwaremill.sttp.client3" %% "zio"      % version
   val zioJson = "com.softwaremill.sttp.client3" %% "zio-json" % version
 }
 

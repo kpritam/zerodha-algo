@@ -49,7 +49,8 @@ object App extends ZIOAppDefault:
         Orders.live,
 
         // strategies
-        EverydayStrategy.live
+        EverydayStrategy.live,
+        ZLayer.Debug.tree
       )
 
   private def sellBuyModifyOrder =
