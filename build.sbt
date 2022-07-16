@@ -2,16 +2,20 @@ val scala3Version = "3.1.3"
 
 inThisBuild(
   List(
-    scalaVersion                                   := scala3Version,
-    version                                        := "0.1.0-SNAPSHOT",
-    fork                                           := true,
+    scalaVersion := scala3Version,
+    version      := "0.1.0-SNAPSHOT",
+    fork         := true,
+
+    // compiler option
     scalacOptions ++= Seq(
       "-explain",
       "-indent",
       "-new-syntax"
     ),
-    semanticdbEnabled                              := true,
-    semanticdbVersion                              := scalafixSemanticdb.revision,
+    semanticdbEnabled := true,
+    semanticdbVersion := scalafixSemanticdb.revision,
+
+    // scalafix
     scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.6.0"
   )
 )
@@ -21,8 +25,9 @@ lazy val root = project
   .aggregate(kiteconnect, strategies)
 
 lazy val strategies = project
+  .enablePlugins(JavaAppPackaging)
   .settings(
-    fork := true,
+    fork                   := true,
     libraryDependencies ++= Seq(
       Deps.kiteConnect,
       ZIO.core,
@@ -31,7 +36,8 @@ lazy val strategies = project
       Sttp.core,
       Quill.zio,
       Quill.sqlite
-    )
+    ),
+    Universal / maintainer := "phkadam2008@gmail.com"
   )
   .dependsOn(kiteconnect)
 
