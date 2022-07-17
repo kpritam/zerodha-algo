@@ -29,6 +29,8 @@ case class Instrument(
 
   def expiryDateEquals(that: LocalDate): Boolean = expiry.compareTo(that) == 0
 
+  def eq(req: InstrumentRequest): Boolean = exchange == req.exchange.toString && name == req.name
+
 object Instrument:
   given JsonCodec[Instrument] = DeriveJsonCodec.gen[Instrument]
 
@@ -45,7 +47,8 @@ object Instrument:
       instrument.exchange,
       instrument.strike.toDouble,
       instrument.lot_size,
-      instrument.expiry.toIndiaLocalDate
+      if instrument.expiry == null then LocalDate.now(indiaZone)
+      else instrument.expiry.toIndiaLocalDate
     )
 
 case class CEPEInstrument(ce: Instrument, pe: Instrument):

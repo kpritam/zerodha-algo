@@ -5,14 +5,11 @@ import dev.kpritam.zerodha.db.Instruments
 import dev.kpritam.zerodha.db.Orders
 import dev.kpritam.zerodha.kite.*
 import dev.kpritam.zerodha.kite.models.*
-import dev.kpritam.zerodha.kite.time.indiaZone
 import dev.kpritam.zerodha.models.LastPriceExceeds
 import dev.kpritam.zerodha.time.nextWeekday
 import dev.kpritam.zerodha.utils.triggerPriceAndPrice
 import zio.*
 import zio.json.*
-
-import java.time.LocalDateTime
 
 trait EverydayStrategy:
   def sellBuyModifyOrder(
@@ -54,10 +51,8 @@ case class EverydayStrategyLive(
       state <- State.make
 
       instrumentRequest = InstrumentRequest(exchange, name, nextWeekday(expiryDay))
-      _                <- seedInstrumentsIfNeeded(instrumentRequest)
-
-      cepe <- kiteService.getCEPEInstrument(instrumentRequest, price)
-      _    <- ZIO.logInfo(s"Selected instruments: ${cepe.toJson}")
+      cepe             <- kiteService.getCEPEInstrument(instrumentRequest, price)
+      _                <- ZIO.logInfo(s"Selected instruments: ${cepe.toJson}")
 
       orderReq = OrderRequest(
                    exchange = exchange.toString,
@@ -134,9 +129,9 @@ case class EverydayStrategyLive(
     for
       _          <- ZIO.logDebug(s"Modifying order: $order")
       quote      <- kiteClient.getQuote(QuoteRequest.from(order))
-      _          <- ZIO.when(quote.lastPrice * 2.5 > order.price)(
-                      ZIO.fail(LastPriceExceeds(quote.lastPrice, order.price))
-                    )
+      _          <- ZIO
+                      .fail(LastPriceExceeds(quote.lastPrice, order.price))
+                      .when(quote.lastPrice * 2.5 > order.price)
       (tp, price) = triggerPriceAndPrice(quote.lastPrice, quote)
       res        <-
         kiteClient.modifyOrder(
@@ -146,20 +141,6 @@ case class EverydayStrategyLive(
         )
       _          <- ZIO.logDebug(s"Order modified: $res")
     yield res
-
-  private def seedInstrumentsIfNeeded(request: InstrumentRequest) =
-    for
-      instruments <- instruments.all
-      _           <- ZIO.unless(isAfter(instruments, 9, 15))(
-                       ZIO.logDebug("Downloading instruments ...") *> kiteService.seedInstruments(request)
-                     )
-    yield ()
-
-  private def isAfter(instruments: List[Instrument], hour: Int, min: Int) =
-    instruments.exists { instrument =>
-      val time = LocalDateTime.now(indiaZone).withHour(hour).withMinute(min)
-      instrument.createdAt.isAfter(time)
-    }
 
   private def placeOrder(orderReq: OrderRequest, variety: String, update: Order => UIO[Unit]) =
     for

@@ -10,9 +10,9 @@ import sttp.client3.HttpClientSyncBackend
 import zio.*
 
 //noinspection TypeAnnotation
-object Layers {
+object Layers:
   val kiteConnectLive =
-    ZLayer.fromFunction((cfg: KiteConfig) => KiteConnect(cfg.apiKey, true))
+    ZLayer.fromFunction((cfg: KiteConfig) => KiteConnect(cfg.apiKey, false))
 
   // zerodha kite login flow requires cookies to be passed along in redirects
   val sttpBackend = ZLayer.succeed(
@@ -31,4 +31,3 @@ object Layers {
         yield ticker
       )(ticker => ZIO.succeed(ticker.disconnect()))
     )
-}

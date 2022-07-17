@@ -9,13 +9,13 @@ import zio.stream.UStream
 
 import java.lang
 import java.sql.SQLException
+import java.time.LocalDate
 import java.util.Date
 import javax.sql.DataSource
 
 trait KiteService:
-  def getInstrumentsWithLTP(request: InstrumentRequest): Task[List[Instrument]]
+  def seedAllInstruments(expiryDate: LocalDate): Task[List[Long]]
   def getCEPEInstrument(request: InstrumentRequest, price: Double): Task[CEPEInstrument]
-  def seedInstruments(request: InstrumentRequest): Task[List[Long]]
   def placeOrder(request: OrderRequest, variety: String): Task[Order]
 
   def subscribeOrders(tokens: List[lang.Long]): UStream[Order]
@@ -23,20 +23,8 @@ trait KiteService:
 object KiteService:
   val live = ZLayer.fromFunction(KiteServiceLive.apply)
 
-  def getInstrumentsWithLTP(request: InstrumentRequest): RIO[KiteService, List[Instrument]] =
-    ZIO.serviceWithZIO(_.getInstrumentsWithLTP(request))
-
-  def getCEPEInstrument(
-      request: InstrumentRequest,
-      price: Double
-  ): RIO[KiteService, CEPEInstrument] =
-    ZIO.serviceWithZIO(_.getCEPEInstrument(request, price))
-
-  def seedInstruments(request: InstrumentRequest): RIO[KiteService, List[Long]] =
-    ZIO.serviceWithZIO(_.seedInstruments(request))
-
-  def placeOrder(request: OrderRequest, variety: String): RIO[KiteService, Order] =
-    ZIO.serviceWithZIO[KiteService](_.placeOrder(request, variety))
+  def seedAllInstruments(expiryDate: LocalDate): RIO[KiteService, List[Long]] =
+    ZIO.serviceWithZIO(_.seedAllInstruments(expiryDate))
 
 case class KiteServiceLive(
     kiteClient: KiteClient,
@@ -44,22 +32,17 @@ case class KiteServiceLive(
     instruments: Instruments,
     orders: Orders
 ) extends KiteService:
-  def getInstrumentsWithLTP(request: InstrumentRequest): Task[List[Instrument]] =
-    def token(i: Instrument) = QuoteRequest.InstrumentToken(i.instrumentToken)
-    for
-      instruments <- kiteClient.getInstruments(request)
-      ltp         <- kiteClient.getLTPs(instruments.map(token))
-    yield instruments.map(i => i.copy(lastPrice = ltp.getLastPriceOrZero(i.instrumentToken)))
+  def seedAllInstruments(expiryDate: LocalDate): Task[List[Long]] =
+    kiteClient.getInstruments
+      .flatMap(i => instruments.seed(i.filter(_.expiryDateEquals(expiryDate))))
 
   def getCEPEInstrument(request: InstrumentRequest, price: Double): Task[CEPEInstrument] =
     for
-      instruments <- instruments.all
-      ce          <- findInstrument(instruments.filter(_.isCE), price)
-      pe          <- findInstrument(instruments.filter(_.isPE), ce.lastPrice)
+      i       <- instruments.all.map(_.filter(_.eq(request)))
+      updated <- getLTPs(i)
+      ce      <- findInstrument(updated.filter(_.isCE), price)
+      pe      <- findInstrument(updated.filter(_.isPE), ce.lastPrice)
     yield CEPEInstrument(ce, pe)
-
-  def seedInstruments(request: InstrumentRequest): Task[List[Long]] =
-    getInstrumentsWithLTP(request).flatMap(instruments.seed)
 
   def placeOrder(request: OrderRequest, variety: String): Task[Order] =
     for
@@ -78,6 +61,13 @@ case class KiteServiceLive(
         orders
           .update(o)
           .catchAll(e =>
-            ZIO.logErrorCause(s"Failed to update OrderId: ${o.orderId}", Cause.fail(e))
+            ZIO.logError(s"Failed to update OrderId: ${o.orderId}, reason: ${e.getMessage}")
           )
+      )
+
+  private def getLTPs(instruments: List[Instrument]): Task[List[Instrument]] =
+    kiteClient
+      .getLTPs(instruments.map(i => QuoteRequest.InstrumentToken(i.instrumentToken)))
+      .map(ltp =>
+        instruments.map(i => i.copy(lastPrice = ltp.getLastPriceOrZero(i.instrumentToken)))
       )
