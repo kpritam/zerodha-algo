@@ -24,10 +24,10 @@ object App extends ZIOAppDefault:
 
   def run: ZIO[Any, Any, Any] =
     (for
-      _ <- KiteTickerClient.init
-      _ <- seedInstrumentsIfNeeded
-//      _ <- strategies.everyday.run
-      _ <- OvernightHedge.placePEOrder
+      _  <- KiteTickerClient.init
+      f1 <- seedInstrumentsIfNeeded.schedule(everyday(9, 25)).fork
+      f2 <- strategies.everyday.run.fork
+      _  <- f1.zip(f2).await
     yield ())
       .provide(
         logging.console(logLevel = LogLevel.All),

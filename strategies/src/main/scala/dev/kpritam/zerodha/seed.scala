@@ -15,8 +15,13 @@ private val expiryDate = nextWeekday(Calendar.THURSDAY)
 def seedInstrumentsIfNeeded =
   for
     instruments <- Instruments.all
-    _           <- (ZIO.logDebug("Downloading instruments ...") *> KiteService.seedAllInstruments(expiryDate))
-                     .unless(isAfter(instruments, 9, 15))
+    _           <- ZIO.unless(isAfter(instruments, 9, 20)) {
+                     for
+                       _ <- ZIO.logDebug(s"Downloading instruments expiring at $expiryDate...")
+                       r <- KiteService.seedAllInstruments(expiryDate)
+                       _ <- ZIO.logDebug(s"Total: ${r.size} instruments downloaded and stored in DB")
+                     yield ()
+                   }
   yield ()
 
 private def isAfter(instruments: List[Instrument], hour: Int, min: Int) =

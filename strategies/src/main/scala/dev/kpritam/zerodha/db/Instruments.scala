@@ -26,7 +26,7 @@ case class InstrumentsLive() extends Instruments:
   import QuillCtx.*
 
   def create(instrument: Instrument): IO[SQLException, Long] =
-    run(quote(query[Instrument].insertValue(lift(instrument)))).provide(dataSourceLayer)
+    run(query[Instrument].insertValue(lift(instrument))).provide(dataSourceLayer)
 
   def create(instruments: List[Instrument]): IO[SQLException, List[Long]] =
     run(liftQuery(instruments).foreach(e => query[Instrument].insertValue(e)))

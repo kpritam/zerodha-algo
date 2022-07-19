@@ -9,21 +9,17 @@ import java.util.Calendar
 val run =
   for
     f1 <- EverydayStrategy
-            .sellBuyModifyOrder(
-              exchange = Exchange("NFO"),
-              name = "NIFTY",
-              expiryDay = Calendar.THURSDAY,
-              quantity = 50
-            )
+            .sellBuyModifyOrder(nfo, nifty, thursday, quantity)
             .catchAndLog("Strategy failed")
+            .schedule(everyday(9, 27))
             .fork
     f2 <- EverydayStrategy.modifyPendingOrders
             .catchAndLog("[1:30] Modify failed")
-            .schedule(everyNoon1_30)
+            .schedule(everyday(1, 30))
             .fork
     f3 <- EverydayStrategy.modifyPendingOrders
             .catchAndLog("[2:30] Modify failed")
-            .schedule(everyNoon2_30)
+            .schedule(everyday(2, 30))
             .fork
     _  <- f1.zip(f2).zip(f3).await
   yield ()
