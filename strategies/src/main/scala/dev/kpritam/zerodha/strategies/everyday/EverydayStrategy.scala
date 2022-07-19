@@ -51,7 +51,7 @@ case class EverydayStrategyLive(
       state <- State.make
 
       instrumentRequest = InstrumentRequest(exchange, name, nextWeekday(expiryDay))
-      cepe             <- kiteService.getCEPEInstrument(instrumentRequest, price)
+      cepe             <- kiteService.getCEPEInstrument(instrumentRequest, i => math.abs(i.lastPrice - price))
       _                <- ZIO.logInfo(s"Selected instruments: ${cepe.toJson}")
 
       orderReq = OrderRequest(

@@ -15,7 +15,10 @@ import javax.sql.DataSource
 
 trait KiteService:
   def seedAllInstruments(expiryDate: LocalDate): Task[List[Long]]
-  def getCEPEInstrument(request: InstrumentRequest, price: Double): Task[CEPEInstrument]
+  def getCEPEInstrument[A: Ordering](
+      request: InstrumentRequest,
+      minBy: Instrument => A
+  ): Task[CEPEInstrument]
   def placeOrder(request: OrderRequest, variety: String): Task[Order]
 
   def subscribeOrders(tokens: List[lang.Long]): UStream[Order]
@@ -36,12 +39,15 @@ case class KiteServiceLive(
     kiteClient.getInstruments
       .flatMap(i => instruments.seed(i.filter(_.expiryDateEquals(expiryDate))))
 
-  def getCEPEInstrument(request: InstrumentRequest, price: Double): Task[CEPEInstrument] =
+  def getCEPEInstrument[A: Ordering](
+      request: InstrumentRequest,
+      minBy: Instrument => A
+  ): Task[CEPEInstrument] =
     for
       i       <- instruments.all.map(_.filter(_.eq(request)))
       updated <- getLTPs(i)
-      ce      <- findInstrument(updated.filter(_.isCE), price)
-      pe      <- findInstrument(updated.filter(_.isPE), ce.lastPrice)
+      ce      <- findInstrument(updated.filter(_.isCE), minBy)
+      pe      <- findInstrument(updated.filter(_.isPE), i => math.abs(i.lastPrice - ce.lastPrice))
     yield CEPEInstrument(ce, pe)
 
   def placeOrder(request: OrderRequest, variety: String): Task[Order] =
@@ -51,8 +57,11 @@ case class KiteServiceLive(
       _       <- orders.create(order)
     yield order
 
-  private def findInstrument(instruments: List[Instrument], price: Double): Task[Instrument] =
-    ZIO.getOrFail(instruments.minByOption(i => math.abs(i.lastPrice - price)))
+  private def findInstrument[A: Ordering](
+      instruments: List[Instrument],
+      minBy: Instrument => A
+  ): Task[Instrument] =
+    ZIO.getOrFail(instruments.minByOption(minBy))
 
   def subscribeOrders(tokens: List[lang.Long]): UStream[Order] =
     kiteTickerClient

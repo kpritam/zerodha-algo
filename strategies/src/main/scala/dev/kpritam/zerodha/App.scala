@@ -14,6 +14,7 @@ import dev.kpritam.zerodha.kite.models.Exchange
 import dev.kpritam.zerodha.kite.models.Instrument
 import dev.kpritam.zerodha.kite.time.indiaZone
 import dev.kpritam.zerodha.strategies.everyday.EverydayStrategy
+import dev.kpritam.zerodha.strategies.hedge.OvernightHedge
 import zio.*
 
 import java.time.LocalDateTime
@@ -25,7 +26,8 @@ object App extends ZIOAppDefault:
     (for
       _ <- KiteTickerClient.init
       _ <- seedInstrumentsIfNeeded
-      _ <- strategies.everyday.run
+//      _ <- strategies.everyday.run
+      _ <- OvernightHedge.placePEOrder
     yield ())
       .provide(
         logging.console(logLevel = LogLevel.All),
@@ -46,5 +48,6 @@ object App extends ZIOAppDefault:
 
         // strategies
         EverydayStrategy.live,
+        OvernightHedge.live,
         ZLayer.Debug.tree
       )
