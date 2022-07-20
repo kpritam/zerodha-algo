@@ -25,7 +25,7 @@ object App extends ZIOAppDefault:
   def run: ZIO[Any, Any, Any] =
     (for
       _  <- KiteTickerClient.init
-      f1 <- seedInstrumentsIfNeeded.schedule(everyday(9, 25)).fork
+      f1 <- seedInstrumentsIfNeeded.schedule(everyday(9, 20)).fork
       f2 <- strategies.everyday.run.fork
       _  <- f1.zip(f2).await
     yield ())
@@ -48,6 +48,5 @@ object App extends ZIOAppDefault:
 
         // strategies
         EverydayStrategy.live,
-        OvernightHedge.live,
         ZLayer.Debug.tree
       )

@@ -70,9 +70,9 @@ case class EverydayStrategyLive(
           // place CE & PE market sell order
           ceOrderReq = orderReq.copy(tradingSymbol = cepe.ce.tradingSymbol)
           peOrderReq = orderReq.copy(tradingSymbol = cepe.pe.tradingSymbol)
-          f2        <- placeOrder(ceOrderReq, regular, state.updateCe).fork
-          f3        <- placeOrder(peOrderReq, regular, state.updatePe).fork
-          _         <- f2.zip(f3).zip(f1).join
+          _         <- placeOrder(ceOrderReq, regular, state.updateCe)
+          _         <- placeOrder(peOrderReq, regular, state.updatePe)
+          _         <- f1.await
         yield ()
     yield ()
 
@@ -127,18 +127,15 @@ case class EverydayStrategyLive(
 
   private def modifyOrder(orderReq: OrderRequest, order: Order) =
     for
-      _          <- ZIO.logDebug(s"Modifying order: $order")
-      quote      <- kiteClient.getQuote(QuoteRequest.from(order))
-      _          <- ZIO
-                      .fail(LastPriceExceeds(quote.lastPrice, order.price))
-                      .when(quote.lastPrice * 2.5 > order.price)
+      _     <- ZIO.logDebug(s"Modifying order: $order")
+      quote <- kiteClient.getQuote(QuoteRequest.from(order))
+      _     <- ZIO
+                 .fail(LastPriceExceeds(quote.lastPrice, order.price))
+                 .when(quote.lastPrice * 2.5 > order.price)
+
       (tp, price) = triggerPriceAndPrice(quote.lastPrice, quote)
-      res        <-
-        kiteClient.modifyOrder(
-          order.orderId,
-          orderReq.toSLBuy(tp, price, order.tradingSymbol),
-          regular
-        )
+      modifyReq   = orderReq.toSLBuy(tp, price, order.tradingSymbol)
+      res        <- kiteClient.modifyOrder(order.orderId, modifyReq, regular)
       _          <- ZIO.logDebug(s"Order modified: $res")
     yield res
 

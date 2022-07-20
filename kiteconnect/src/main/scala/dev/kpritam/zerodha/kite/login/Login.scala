@@ -23,6 +23,8 @@ trait KiteLogin:
   def login: Task[User]
   def createSession(requestToken: String): Task[User]
 
+  def logout: Task[Unit]
+
 object KiteLogin:
   val live = ZLayer.fromFunction(KiteLoginLive.apply)
 
@@ -71,6 +73,9 @@ case class KiteLoginLive(
 
   def login: Task[User] =
     requestToken.flatMap(createSession)
+
+  def logout: Task[Unit] =
+    ZIO.attemptBlocking(kiteConnect.logout())
 
   private def post[T: zio.json.JsonDecoder](
       url: String,

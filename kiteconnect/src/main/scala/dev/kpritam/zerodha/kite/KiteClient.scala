@@ -102,6 +102,7 @@ case class KiteClientLive(kiteConnect: KiteConnect, login: KiteLogin) extends Ki
       for
         _   <- ZIO.logWarning(s"Session expired. Logging in again. Error: $msg")
         _   <- login.login.map(user => kiteConnect.setAccessToken(user.accessToken))
+        _   <- ZIO.logInfo("Login successful, retrying request ...")
         res <- attemptBlocking(effect)
       yield res
     }
