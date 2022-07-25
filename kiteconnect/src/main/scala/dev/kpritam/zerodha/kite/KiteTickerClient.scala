@@ -10,6 +10,7 @@ import zio.*
 import zio.stream.*
 
 import java.lang
+import scala.concurrent.duration.DurationInt
 import scala.jdk.CollectionConverters.IterableHasAsJava
 import scala.jdk.CollectionConverters.SeqHasAsJava
 
@@ -31,6 +32,8 @@ case class KiteTickerLive(kiteTicker: KiteTicker) extends KiteTickerClient:
     for
       _ <- ZIO.logDebug("Initializing Kite Ticker")
       _ <- (onConnected <&> onDisconnected <&> onError).fork
+      _ <- ZIO.sleep(1.second)
+      _ <- ZIO.succeed(kiteTicker.setTryReconnection(true))
       _ <- ZIO.attemptBlocking(kiteTicker.connect())
     yield ()
 
