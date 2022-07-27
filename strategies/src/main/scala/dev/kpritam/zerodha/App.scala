@@ -24,13 +24,21 @@ object App extends ZIOAppDefault:
 
   def run: ZIO[Any, Any, Any] =
     (for
-      _  <- KiteTickerClient.init
-      f1 <- seedInstrumentsIfNeeded.schedule(everyday(4, 20)).fork
-      f2 <- strategies.everyday.run.fork
-      _  <- f1.zip(f2).await
+      _ <- ZIO.logInfo("Scheduling app to run at 9:20 AM")
+      _ <- app.schedule(everyday(3, 50))
+    yield ()).provideSome(
+      logging.removeDefaultLoggers,
+      logging.console(logLevel = LogLevel.All)
+    )
+
+  private val app =
+    (for
+      _ <- ZIO.logInfo("Starting app ...")
+      _ <- KiteTickerClient.init
+      _ <- seedInstrumentsIfNeeded
+      _ <- strategies.everyday.run
     yield ())
       .provide(
-        logging.console(logLevel = LogLevel.All),
         Totp.live,
         Layers.sttpBackend,
         // kite
