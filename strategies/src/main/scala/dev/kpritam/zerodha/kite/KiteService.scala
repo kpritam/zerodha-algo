@@ -53,7 +53,10 @@ case class KiteServiceLive(
   def placeOrder(request: OrderRequest, variety: String): Task[Order] =
     for
       orderId <- kiteClient.placeOrder(request, variety)
-      order   <- kiteClient.getOrder(orderId)
+      order   <- kiteClient
+                   .getOrder(orderId)
+                   .retry(Schedule.fixed(400.millis) && Schedule.recurs(5))
+                   .orElseSucceed(request.toOrder(orderId, variety))
       _       <- orders.create(order)
     yield order
 

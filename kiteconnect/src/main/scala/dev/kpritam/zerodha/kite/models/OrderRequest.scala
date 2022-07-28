@@ -45,6 +45,25 @@ case class OrderRequest(
     orderParams.icebergLegs = icebergLegs
     orderParams
 
+  def toOrder(id: String, variety: String): Order =
+    Order(
+      orderId = id,
+      tradingSymbol = tradingSymbol,
+      variety = variety,
+      orderType = orderType,
+      triggerPrice = triggerPrice,
+      price = price,
+      product = product,
+      exchange = exchange,
+      transactionType = transactionType,
+      quantity = quantity,
+      disclosedQuantity = disclosedQuantity,
+      parentOrderId = parentOrderId,
+      tag = tag,
+      validity = validity,
+      validityTtl = validityTTL
+    )
+
 object OrderRequest:
   def from(o: Order): OrderRequest =
     OrderRequest(
