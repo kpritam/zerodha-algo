@@ -12,4 +12,4 @@ private val regular  = "regular"
 private val nfo      = Exchange("NFO")
 private val nifty    = "NIFTY"
 private val thursday = Calendar.THURSDAY
-private val quantity = 50
+private val quantity = 750

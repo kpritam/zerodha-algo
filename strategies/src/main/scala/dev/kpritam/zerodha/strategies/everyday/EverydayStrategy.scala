@@ -80,7 +80,11 @@ case class EverydayStrategyLive(
     for
       pendingOrders <- orders.getPendingSL
       orders        <- kiteClient.getOrders(pendingOrders.map(_.orderId))
-      res           <- ZIO.foreachPar(orders)(o => modifyOrder(OrderRequest.from(o), o))
+      res           <- ZIO.foreachPar(orders)(o =>
+                         modifyOrder(OrderRequest.from(o), o)
+                           .tapError(e => ZIO.logError(e.getMessage))
+                           .orElseSucceed(s"FAILED_${o.orderId}")
+                       )
     yield res
 
   private def runOrderCompletionTasks(

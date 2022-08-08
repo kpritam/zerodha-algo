@@ -11,8 +11,8 @@ object ZIO {
   val json           = "dev.zio" %% "zio-json"            % jsonVersion
   val config         = "dev.zio" %% "zio-config"          % configVersion
   val configMagnolia = "dev.zio" %% "zio-config-magnolia" % configVersion
-
 }
+
 object Sttp {
   private val version = "3.7.0"
 
