@@ -17,14 +17,3 @@ private val quantity   = 50
 private val regular    = "regular"
 
 private val instrumentReq = InstrumentRequest(nfo, nifty, expiryDate)
-
-private def marketBuyOrder(tradingSymbol: String) =
-  OrderRequest(
-    exchange = nfo.toString,
-    validity = "DAY",
-    product = "NRML",
-    orderType = "MARKET",
-    transactionType = "BUY",
-    quantity = quantity,
-    tradingSymbol = tradingSymbol
-  )

@@ -20,6 +20,7 @@ trait EverydayStrategy:
   ): Task[Unit]
 
   def modifyPendingOrders: Task[List[String]]
+  def closePendingOrders: Task[List[String]]
 
 object EverydayStrategy:
   val live = ZLayer.fromFunction(EverydayStrategyLive.apply)
@@ -34,6 +35,9 @@ object EverydayStrategy:
 
   def modifyPendingOrders: RIO[EverydayStrategy, List[String]] =
     ZIO.serviceWithZIO[EverydayStrategy](_.modifyPendingOrders)
+
+  def closePendingOrders: RIO[EverydayStrategy, List[String]] =
+    ZIO.serviceWithZIO[EverydayStrategy](_.closePendingOrders)
 
 case class EverydayStrategyLive(
     kiteClient: KiteClient,
@@ -77,14 +81,24 @@ case class EverydayStrategyLive(
     yield ()
 
   def modifyPendingOrders: Task[List[String]] =
+    modifyPendingOrders(o => modifyOrder(OrderRequest.from(o), o))
+
+  def closePendingOrders: Task[List[String]] =
+    modifyPendingOrders(o =>
+      closeOrder(OrderRequest.marketBuy(o.exchange, o.quantity.toInt, o.tradingSymbol), o)
+    )
+
+  def modifyPendingOrders(modify: Order => Task[String]): Task[List[String]] =
     for
-      pendingOrders <- orders.getPendingSL
+      pendingOrders <-
+        orders.getPendingSL.tap(o =>
+          ZIO.logDebug(s"Modifying pending orders: ${o.map(_.orderId).mkString("[", ", ", "]")}")
+        )
       orders        <- kiteClient.getOrders(pendingOrders.map(_.orderId))
-      res           <- ZIO.foreachPar(orders)(o =>
-                         modifyOrder(OrderRequest.from(o), o)
-                           .tapError(e => ZIO.logError(e.getMessage))
-                           .orElseSucceed(s"FAILED_${o.orderId}")
-                       )
+      res           <-
+        ZIO.foreachPar(orders)(o =>
+          modify(o).tapError(e => ZIO.logError(e.getMessage)).orElseSucceed(s"FAILED_${o.orderId}")
+        )
     yield res
 
   private def runOrderCompletionTasks(
@@ -141,6 +155,13 @@ case class EverydayStrategyLive(
       modifyReq   = orderReq.toSLBuy(tp, price, order.tradingSymbol)
       res        <- kiteClient.modifyOrder(order.orderId, modifyReq, regular)
       _          <- ZIO.logDebug(s"Order modified: $res")
+    yield res
+
+  private def closeOrder(orderReq: OrderRequest, order: Order) =
+    for
+      _   <- ZIO.logDebug(s"Closing order: $order")
+      res <- kiteClient.modifyOrder(order.orderId, orderReq, regular)
+      _   <- ZIO.logDebug(s"Order closed: $res")
     yield res
 
   private def placeOrder(orderReq: OrderRequest, variety: String, update: Order => UIO[Unit]) =

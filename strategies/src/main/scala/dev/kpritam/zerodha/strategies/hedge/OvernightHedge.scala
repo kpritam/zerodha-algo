@@ -31,5 +31,8 @@ case class OvernightHedgeLive(kiteClient: KiteClient, kiteService: KiteService)
     for
       ltp  <- kiteClient.getLTP(QuoteRequest.Instrument(nifty50, nse))
       cepe <- kiteService.getCEPEInstrument(instrumentReq, i => math.abs(i.strike - ltp.lastPrice))
-      res  <- kiteService.placeOrder(marketBuyOrder(cepe.pe.tradingSymbol), regular)
+      res  <- kiteService.placeOrder(
+                OrderRequest.marketBuy(nfo.toString, quantity, cepe.pe.tradingSymbol),
+                regular
+              )
     yield res

@@ -4,6 +4,7 @@ import dev.kpritam.zerodha.db.Instruments
 import dev.kpritam.zerodha.kite.KiteService
 import dev.kpritam.zerodha.kite.models.Instrument
 import dev.kpritam.zerodha.kite.time.indiaZone
+import dev.kpritam.zerodha.models.InstrumentsNotFound
 import dev.kpritam.zerodha.time.nextWeekday
 import zio.*
 
@@ -11,10 +12,6 @@ import java.time.{LocalDate, LocalDateTime}
 import java.util.Calendar
 
 private val expiryDate = nextWeekday(Calendar.THURSDAY)
-
-case class InstrumentsNotFound(expiryDate: LocalDate) extends Throwable {
-  override def getMessage: String = s"Instruments not found for expiry date of: $expiryDate"
-}
 
 def seedInstrumentsIfNeeded =
   for

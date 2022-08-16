@@ -79,6 +79,17 @@ object OrderRequest:
       o.triggerPrice
     )
 
+  def marketBuy(exchange: String, quantity: Int, tradingSymbol: String): OrderRequest =
+    OrderRequest(
+      exchange = exchange,
+      validity = "DAY",
+      product = "NRML",
+      orderType = "MARKET",
+      transactionType = "BUY",
+      quantity = quantity,
+      tradingSymbol = tradingSymbol
+    )
+
 extension (req: OrderRequest)
   def toSLBuy(triggerPrice: Double, price: Double, tradingSymbol: String): OrderRequest =
     req.copy(
