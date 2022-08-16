@@ -25,7 +25,7 @@ object App extends ZIOAppDefault:
   def run: ZIO[Any, Any, Any] =
     (for
       _ <- ZIO.logInfo("Scheduling app to run at 9:20 AM")
-      _ <- app.schedule(everyday(3, 50))
+      _ <- app.schedule(everyday(9, 20))
     yield ()).provideSome(
       logging.removeDefaultLoggers,
       logging.console(logLevel = LogLevel.All)
