@@ -10,6 +10,12 @@ import dev.kpritam.zerodha.time.nextWeekday
 import dev.kpritam.zerodha.utils.triggerPriceAndPrice
 import zio.*
 import zio.json.*
+import zio.stream.*
+import zio.stream.ZStream.HaltStrategy
+import dev.kpritam.zerodha.cron.*
+import dev.kpritam.zerodha.kite.time.indiaZone
+
+import java.time.DayOfWeek
 
 trait EverydayStrategy:
   def sellBuyModifyOrder(
@@ -55,7 +61,14 @@ case class EverydayStrategyLive(
       state <- State.make
 
       instrumentRequest = InstrumentRequest(exchange, name, nextWeekday(expiryDay))
-      cepe             <- kiteService.getCEPEInstrument(instrumentRequest, i => math.abs(i.lastPrice - price))
+      isThursday       <- Clock.instant.map(_.atZone(indiaZone).getDayOfWeek == DayOfWeek.THURSDAY)
+      cepe             <-
+        kiteService.getCEPEInstrument(
+          instrumentRequest,
+          i =>
+            if isThursday && i.lastPrice > price then Double.MaxValue
+            else math.abs(i.lastPrice - price)
+        )
       _                <- ZIO.logInfo(s"Selected instruments: ${cepe.toJson}")
 
       orderReq = OrderRequest(
@@ -68,7 +81,11 @@ case class EverydayStrategyLive(
                  )
       _       <-
         for
-          f1 <- runOrderCompletionTasks(orderReq, cepe.tokens, state).fork
+          _  <- ZIO.logDebug(s"Subscribing to tokens: ${cepe.tokens.mkString(", ")}")
+          f1 <- runOrderCompletionTasks(orderReq, cepe.tokens, state)
+                  .haltWhen(ZIO.unit.schedule(onceDay(15, 20)))
+                  .runDrain
+                  .fork
           _  <- ZIO.sleep(1.seconds)
 
           // place CE & PE market sell order
@@ -106,30 +123,26 @@ case class EverydayStrategyLive(
       tokens: List[java.lang.Long],
       state: Ref[State]
   ) =
-    for
-      _   <- ZIO.logDebug(s"Subscribing to tokens: ${tokens.mkString(", ")}")
-      res <- kiteService
-               .subscribeOrders(tokens)
-               .collectZIO {
-                 case o if o.completed =>
-                   for
-                     _ <- ZIO.logDebug(s"[1] Order completed: $o")
-                     _ <- ZIO.sleep(1.second)
-                     s <- state.get.tap(s => ZIO.logDebug("[2] Current State: " + s))
-                     _ <- ZIO.whenCase(Some(o.orderId)) {
-                            case s.ceOrderId => placeSLOrder(orderReq, o, state.updateCeSL)
-                            case s.peOrderId => placeSLOrder(orderReq, o, state.updatePeSL)
+    kiteService
+      .subscribeOrders(tokens)
+      .collectZIO {
+        case o if o.completed =>
+          for
+            _ <- ZIO.logDebug(s"[1] Order completed: $o")
+            _ <- ZIO.sleep(1.second)
+            s <- state.get.tap(s => ZIO.logDebug("[2] Current State: " + s))
+            _ <- ZIO.whenCase(Some(o.orderId)) {
+                   case s.ceOrderId => placeSLOrder(orderReq, o, state.updateCeSL)
+                   case s.peOrderId => placeSLOrder(orderReq, o, state.updatePeSL)
 
-                            case s.ceSLOrderId if s.peOrder.nonEmpty =>
-                              modifyOrder(orderReq, s.peOrder.get)
-                            case s.peSLOrderId if s.ceOrder.nonEmpty =>
-                              modifyOrder(orderReq, s.ceOrder.get)
-                          }
-                   yield ()
-               }
-               .take(4)
-               .runDrain
-    yield res
+                   case s.ceSLOrderId if s.peOrder.nonEmpty =>
+                     modifyOrder(orderReq, s.peOrder.get)
+                   case s.peSLOrderId if s.ceOrder.nonEmpty =>
+                     modifyOrder(orderReq, s.ceOrder.get)
+                 }
+          yield ()
+      }
+      .take(4)
 
   private def placeSLOrder(orderReq: OrderRequest, order: Order, update: Order => UIO[Unit]) =
     for
