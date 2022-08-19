@@ -5,7 +5,8 @@ import dev.kpritam.zerodha.kite.time.toIndiaLocalDate
 
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.{Calendar, TimeZone}
+import java.util.Calendar
+import java.util.TimeZone
 
 def nextWeekday(nextDayOfWeek: Int): LocalDate =
   val cal      = Calendar.getInstance(TimeZone.getTimeZone(indiaZone))

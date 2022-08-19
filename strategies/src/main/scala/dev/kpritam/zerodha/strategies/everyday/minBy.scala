@@ -1,13 +1,15 @@
 package dev.kpritam.zerodha.strategies.everyday
 
-import zio.*
+import dev.kpritam.zerodha.kite.models.InstrumentRequest
 import dev.kpritam.zerodha.kite.time.indiaZone
+import zio.*
 
 import java.time.DayOfWeek
 
 private def isThursday =
   Clock.instant.map(_.atZone(indiaZone).getDayOfWeek == DayOfWeek.THURSDAY)
 
-private def findMinBy(items: List[Double], value: Double) =
+private def minByBasedOnDayOfWeek(price: Double): UIO[Double => Double] =
   for thursday <- isThursday
-  yield items.minBy(i => if thursday && i > value then Double.MaxValue else math.abs(i - value))
+  yield lastPrice =>
+    if thursday && lastPrice > price then Double.MaxValue else math.abs(lastPrice - price)

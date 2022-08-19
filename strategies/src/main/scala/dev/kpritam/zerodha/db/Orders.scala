@@ -2,7 +2,7 @@ package dev.kpritam.zerodha.db
 
 import dev.kpritam.zerodha.kite.models.Instrument
 import dev.kpritam.zerodha.kite.models.Order
-import io.getquill._
+import io.getquill.*
 import io.getquill.updateValue
 import zio.*
 

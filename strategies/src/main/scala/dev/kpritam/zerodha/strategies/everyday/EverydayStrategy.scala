@@ -1,19 +1,19 @@
 package dev.kpritam.zerodha.strategies.everyday
 
 import com.zerodhatech.models.User
+import dev.kpritam.zerodha.cron.*
 import dev.kpritam.zerodha.db.Instruments
 import dev.kpritam.zerodha.db.Orders
 import dev.kpritam.zerodha.kite.*
 import dev.kpritam.zerodha.kite.models.*
+import dev.kpritam.zerodha.kite.time.indiaZone
 import dev.kpritam.zerodha.models.LastPriceExceeds
 import dev.kpritam.zerodha.time.nextWeekday
 import dev.kpritam.zerodha.utils.triggerPriceAndPrice
 import zio.*
 import zio.json.*
-import zio.stream.*
 import zio.stream.ZStream.HaltStrategy
-import dev.kpritam.zerodha.cron.*
-import dev.kpritam.zerodha.kite.time.indiaZone
+import zio.stream.*
 
 import java.time.DayOfWeek
 
@@ -61,14 +61,8 @@ case class EverydayStrategyLive(
       state <- State.make
 
       instrumentRequest = InstrumentRequest(exchange, name, nextWeekday(expiryDay))
-      isThursday       <- Clock.instant.map(_.atZone(indiaZone).getDayOfWeek == DayOfWeek.THURSDAY)
-      cepe             <-
-        kiteService.getCEPEInstrument(
-          instrumentRequest,
-          i =>
-            if isThursday && i.lastPrice > price then Double.MaxValue
-            else math.abs(i.lastPrice - price)
-        )
+      minBy            <- minByBasedOnDayOfWeek(price)
+      cepe             <- kiteService.getCEPEInstrument(instrumentRequest, i => minBy(i.lastPrice))
       _                <- ZIO.logInfo(s"Selected instruments: ${cepe.toJson}")
 
       orderReq = OrderRequest(
@@ -132,32 +126,34 @@ case class EverydayStrategyLive(
             _ <- ZIO.sleep(1.second)
             s <- state.get.tap(s => ZIO.logDebug("[2] Current State: " + s))
             _ <- ZIO.whenCase(Some(o.orderId)) {
-                   case s.ceOrderId => placeSLOrder(orderReq, o, state.updateCeSL)
-                   case s.peOrderId => placeSLOrder(orderReq, o, state.updatePeSL)
+                   case s.ceOrderId => placeSLOrder(orderReq, o, state.updateCeSL).ignore
+                   case s.peOrderId => placeSLOrder(orderReq, o, state.updatePeSL).ignore
 
                    case s.ceSLOrderId if s.peOrder.nonEmpty =>
-                     modifyOrder(orderReq, s.peOrder.get)
+                     modifyOrder(orderReq, s.peOrder.get).ignore
                    case s.peSLOrderId if s.ceOrder.nonEmpty =>
-                     modifyOrder(orderReq, s.ceOrder.get)
+                     modifyOrder(orderReq, s.ceOrder.get).ignore
                  }
           yield ()
       }
       .take(4)
 
   private def placeSLOrder(orderReq: OrderRequest, order: Order, update: Order => UIO[Unit]) =
-    for
-      _          <- ZIO.logDebug(s"Placing SL order: $orderReq")
+    (for
+      _          <- ZIO.logDebug(s"[PlaceSLOrder] Placing order: $orderReq")
       quote      <- kiteClient.getQuote(QuoteRequest.from(order))
       (tp, price) = triggerPriceAndPrice(order.averagePrice, quote)
       res        <-
         kiteService
           .placeOrder(orderReq.toSLBuy(tp, price, order.tradingSymbol), regular)
           .tap(update)
-      _          <- ZIO.logDebug(s"SL order placed: $res")
-    yield res
+      _          <- ZIO.logDebug(s"[PlaceSLOrder] Order placed: $res")
+    yield res).tapError(e =>
+      ZIO.logError(s"[PlaceSLOrder] Failed to place order, reason: ${e.getMessage}")
+    )
 
   private def modifyOrder(orderReq: OrderRequest, order: Order) =
-    for
+    (for
       _     <- ZIO.logDebug(s"Modifying order: $order")
       quote <- kiteClient.getQuote(QuoteRequest.from(order))
       _     <- ZIO
@@ -168,7 +164,12 @@ case class EverydayStrategyLive(
       modifyReq   = orderReq.toSLBuy(tp, price, order.tradingSymbol)
       res        <- kiteClient.modifyOrder(order.orderId, modifyReq, regular)
       _          <- ZIO.logDebug(s"Order modified: $res")
-    yield res
+    yield res)
+      .tapError(e =>
+        ZIO.logError(
+          s"Order modification failed: TradingSymbol: ${orderReq.tradingSymbol}, reason : ${e.getMessage}"
+        )
+      )
 
   private def closeOrder(orderReq: OrderRequest, order: Order) =
     for
