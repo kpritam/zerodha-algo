@@ -12,6 +12,7 @@ inThisBuild(
       "-indent",
       "-new-syntax"
     ),
+    testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
     semanticdbEnabled := true,
     semanticdbVersion := scalafixSemanticdb.revision,
 
@@ -35,7 +36,9 @@ lazy val strategies = project
       ZIO.logging,
       Sttp.core,
       Quill.zio,
-      Quill.sqlite
+      Quill.sqlite,
+      ZIO.test,
+      ZIO.testSbt
     ),
     Universal / maintainer := "phkadam2008@gmail.com"
   )
@@ -46,6 +49,7 @@ lazy val kiteconnect = project
     libraryDependencies ++= Seq(
       Deps.kiteConnect,
       Deps.totp,
+      Deps.flyway,
       ZIO.core,
       ZIO.streams,
       ZIO.json,
@@ -53,6 +57,8 @@ lazy val kiteconnect = project
       ZIO.configMagnolia,
       Sttp.core,
       Sttp.zio,
-      Sttp.zioJson
+      Sttp.zioJson,
+      ZIO.test,
+      ZIO.testSbt
     )
   )

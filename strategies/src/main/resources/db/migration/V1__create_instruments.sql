@@ -1,7 +1,7 @@
-create table instrument
+CREATE TABLE IF NOT EXISTS instrument
 (
-    id               integer primary key,
-    created_at       datetime default (datetime('now', 'localtime')),
+    id               integer PRIMARY KEY,
+    created_at       datetime DEFAULT (datetime('now', 'localtime')),
     exchange         text,
     trading_symbol   text,
     expiry           datetime,
@@ -16,6 +16,6 @@ create table instrument
     segment          text
 );
 
-create index idx_exchange_instruments on instrument (exchange);
+CREATE INDEX IF NOT EXISTS idx_exchange_instruments ON instrument (exchange);
 
-create index idx_trading_symbol_instruments on instrument (trading_symbol);
+CREATE INDEX IF NOT EXISTS idx_trading_symbol_instruments ON instrument (trading_symbol);

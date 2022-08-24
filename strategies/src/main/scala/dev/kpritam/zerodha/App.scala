@@ -3,7 +3,9 @@ package dev.kpritam.zerodha
 import dev.kpritam.zerodha.Layers
 import dev.kpritam.zerodha.cron.*
 import dev.kpritam.zerodha.db.Instruments
+import dev.kpritam.zerodha.db.Migrations
 import dev.kpritam.zerodha.db.Orders
+import dev.kpritam.zerodha.db.QuillCtx
 import dev.kpritam.zerodha.kite.KiteClient
 import dev.kpritam.zerodha.kite.KiteConfig
 import dev.kpritam.zerodha.kite.KiteService
@@ -34,6 +36,7 @@ object App extends ZIOAppDefault:
   private val app =
     (for
       _ <- ZIO.logInfo("Starting app ...")
+      _ <- Migrations.migrate
       _ <- KiteTickerClient.init
       _ <- seedInstrumentsIfNeeded
       _ <- strategies.everyday.run
@@ -51,6 +54,8 @@ object App extends ZIOAppDefault:
         // service
         KiteService.live,
         // db
+        Migrations.live,
+        QuillCtx.dataSourceLayer,
         Instruments.live,
         Orders.live,
 

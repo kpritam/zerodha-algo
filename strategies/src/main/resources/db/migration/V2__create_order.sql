@@ -1,7 +1,7 @@
-create table "order"
+CREATE TABLE IF NOT EXISTS "order"
 (
     account_id                text,
-    order_id                  text primary key,
+    order_id                  text PRIMARY KEY,
     exchange_order_id         text,
     parent_order_id           text,
     status                    text,
@@ -29,6 +29,6 @@ create table "order"
     validity_ttl              integer
 );
 
-create index idx_exchange_orders on "order" (exchange);
+CREATE INDEX IF NOT EXISTS idx_exchange_orders ON "order" (exchange);
 
-create index idx_trading_symbol_orders on "order" (trading_symbol);
+CREATE INDEX IF NOT EXISTS idx_trading_symbol_orders ON "order" (trading_symbol);
