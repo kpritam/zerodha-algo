@@ -41,4 +41,4 @@ object InstrumentsSpec extends ZIOSpecDefault:
         instrumentsAfterSeed  <- Instruments.all
       yield assertTrue(instrumentsBeforeSeed.size == 3 && instrumentsAfterSeed.size == 2)
     ) @@ TestAspect.before(Migrations.reset)
-  }.provideShared(QuillCtx.dataSourceLayer, Migrations.live, Instruments.live)
+  }.provideShared(QuillCtx.dataSourceLayer, Migrations.live, InstrumentsLive.layer)

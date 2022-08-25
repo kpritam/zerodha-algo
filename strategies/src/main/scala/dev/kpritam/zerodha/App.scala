@@ -2,20 +2,20 @@ package dev.kpritam.zerodha
 
 import dev.kpritam.zerodha.Layers
 import dev.kpritam.zerodha.cron.*
-import dev.kpritam.zerodha.db.Instruments
+import dev.kpritam.zerodha.db.InstrumentsLive
 import dev.kpritam.zerodha.db.Migrations
-import dev.kpritam.zerodha.db.Orders
+import dev.kpritam.zerodha.db.OrdersLive
 import dev.kpritam.zerodha.db.QuillCtx
 import dev.kpritam.zerodha.kite.KiteClient
 import dev.kpritam.zerodha.kite.KiteConfig
-import dev.kpritam.zerodha.kite.KiteService
+import dev.kpritam.zerodha.kite.KiteServiceLive
 import dev.kpritam.zerodha.kite.KiteTickerClient
 import dev.kpritam.zerodha.kite.login.KiteLogin
 import dev.kpritam.zerodha.kite.login.Totp
 import dev.kpritam.zerodha.kite.models.Exchange
 import dev.kpritam.zerodha.kite.models.Instrument
 import dev.kpritam.zerodha.kite.time.indiaZone
-import dev.kpritam.zerodha.strategies.everyday.EverydayStrategy
+import dev.kpritam.zerodha.strategies.everyday.EverydayStrategyLive
 import dev.kpritam.zerodha.strategies.hedge.OvernightHedge
 import zio.*
 
@@ -52,14 +52,14 @@ object App extends ZIOAppDefault:
         KiteClient.live,
         KiteTickerClient.live,
         // service
-        KiteService.live,
+        KiteServiceLive.layer,
         // db
         Migrations.live,
         QuillCtx.dataSourceLayer,
-        Instruments.live,
-        Orders.live,
+        InstrumentsLive.layer,
+        OrdersLive.layer,
 
         // strategies
-        EverydayStrategy.live,
+        EverydayStrategyLive.layer,
         ZLayer.Debug.tree
       )
