@@ -9,10 +9,12 @@ import java.util.Calendar
 import java.util.TimeZone
 
 def nextWeekday(nextDayOfWeek: Int): LocalDate =
-  val cal      = Calendar.getInstance(TimeZone.getTimeZone(indiaZone))
+  val cal = Calendar.getInstance(TimeZone.getTimeZone(indiaZone))
+  nextWeekday(nextDayOfWeek, LocalDate.now(indiaZone), cal)
+
+def nextWeekday(nextDayOfWeek: Int, now: LocalDate, cal: Calendar): LocalDate =
   cal.set(Calendar.DAY_OF_WEEK, nextDayOfWeek)
   val curWeek  = cal.getTime.toIndiaLocalDate
   cal.add(Calendar.WEEK_OF_YEAR, 1)
   val nextWeek = cal.getTime.toIndiaLocalDate
-  val now      = LocalDate.now(indiaZone)
   if now.isEqual(curWeek) || now.isBefore(curWeek) then curWeek else nextWeek
