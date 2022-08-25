@@ -1,4 +1,4 @@
-package dev.kpritam.zerodha
+package dev.kpritam.zerodha.utils
 
 import com.zerodhatech.models.LTPQuote
 import dev.kpritam.zerodha.kite.models.QuoteRequest

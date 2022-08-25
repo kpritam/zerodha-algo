@@ -5,7 +5,7 @@ import com.zerodhatech.models.Quote
 import scala.math.min
 import scala.math.round
 
-def triggerPrice(price: Double) =
+private def triggerPrice(price: Double) =
   round(price * 2.5 / 0.05) * 0.05
 
 def triggerPriceAndPrice(price: Double, quote: Quote): (Double, Double) =
