@@ -4,41 +4,17 @@ import com.zerodhatech.kiteconnect.KiteConnect
 import com.zerodhatech.models.User
 import dev.kpritam.zerodha.kite.KiteConfig
 import sttp.client3.*
-import sttp.client3.ziojson.*
+import sttp.client3.ziojson.asJson
 import sttp.model.headers.CookieWithMeta
 import zio.*
-import zio.json.*
 
-import scala.collection.immutable.Nil
-import scala.util.Try
+private val baseURL         = "https://kite.zerodha.com"
+private val loginURL        = baseURL + "/api/login"
+private val twofaURL        = baseURL + "/api/twofa"
+private val connectLoginURL = baseURL + "/connect/login"
 
-val baseURL         = "https://kite.zerodha.com"
-val loginURL        = baseURL + "/api/login"
-val twofaURL        = baseURL + "/api/twofa"
-val connectLoginURL = baseURL + "/connect/login"
-
-trait KiteLogin:
-  def requestToken: Task[String]
-  def loginManual: Task[String]
-  def login: Task[User]
-  def createSession(requestToken: String): Task[User]
-
-  def logout: Task[Unit]
-
-object KiteLogin:
-  val live = ZLayer.fromFunction(KiteLoginLive.apply)
-
-  def requestToken: RIO[KiteLogin, String] =
-    ZIO.serviceWithZIO[KiteLogin](_.requestToken)
-
-  def loginManual: RIO[KiteLogin, String] =
-    ZIO.serviceWithZIO[KiteLogin](_.loginManual)
-
-  def createSession(requestToken: String): RIO[KiteLogin, User] =
-    ZIO.serviceWithZIO[KiteLogin](_.createSession(requestToken))
-
-  def login: RIO[KiteLogin, User] =
-    ZIO.serviceWithZIO[KiteLogin](_.login)
+private def extractRequestToken(url: String): Option[String] =
+  url.split("request_token=").lastOption.flatMap(_.split("&").headOption)
 
 case class KiteLoginLive(
     kiteConnect: KiteConnect,
@@ -82,7 +58,7 @@ case class KiteLoginLive(
       body: Map[String, String],
       cookies: Iterable[CookieWithMeta] = Nil
   ) =
-    ZIO.attempt(
+    ZIO.attemptBlocking(
       basicRequest.cookies(cookies).body(body).post(uri"$url").response(asJson[T]).send(backend)
     )
 
@@ -106,5 +82,5 @@ case class KiteLoginLive(
 
   private val loginRequest = Map("user_id" -> kiteConfig.userId, "password" -> kiteConfig.password)
 
-def extractRequestToken(url: String): Option[String] =
-  url.split("request_token=").lastOption.flatMap(_.split("&").headOption)
+object KiteLoginLive:
+  val layer = ZLayer.fromFunction(KiteLoginLive.apply)

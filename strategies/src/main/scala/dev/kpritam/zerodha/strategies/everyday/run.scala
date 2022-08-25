@@ -1,8 +1,8 @@
 package dev.kpritam.zerodha.strategies.everyday
 
-import dev.kpritam.zerodha.utils.catchAndLog
 import dev.kpritam.zerodha.cron.*
 import dev.kpritam.zerodha.kite.models.Exchange
+import dev.kpritam.zerodha.utils.catchAndLog
 
 import java.util.Calendar
 

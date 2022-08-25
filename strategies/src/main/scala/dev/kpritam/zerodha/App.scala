@@ -10,7 +10,7 @@ import dev.kpritam.zerodha.kite.KiteClient
 import dev.kpritam.zerodha.kite.KiteConfig
 import dev.kpritam.zerodha.kite.KiteServiceLive
 import dev.kpritam.zerodha.kite.KiteTickerClient
-import dev.kpritam.zerodha.kite.login.KiteLogin
+import dev.kpritam.zerodha.kite.login.KiteLoginLive
 import dev.kpritam.zerodha.kite.login.Totp
 import dev.kpritam.zerodha.kite.models.Exchange
 import dev.kpritam.zerodha.kite.models.Instrument
@@ -48,7 +48,7 @@ object App extends ZIOAppDefault:
         Layers.kiteConnectLive,
         Layers.kiteTickerLive,
         KiteConfig.live,
-        KiteLogin.live,
+        KiteLoginLive.layer,
         KiteClient.live,
         KiteTickerClient.live,
         // service

@@ -2,8 +2,8 @@ package dev.kpritam.zerodha.kite
 
 import dev.kpritam.zerodha.db.Instruments
 import dev.kpritam.zerodha.db.Orders
-import dev.kpritam.zerodha.utils.getLastPriceOrZero
 import dev.kpritam.zerodha.kite.models.*
+import dev.kpritam.zerodha.utils.getLastPriceOrZero
 import zio.Schedule
 import zio.Task
 import zio.ZIO
