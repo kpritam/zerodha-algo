@@ -27,6 +27,7 @@ case class EverydayStrategyLive(
   def sellBuyModifyOrder(
       exchange: Exchange,
       name: String,
+      price: Double,
       expiryDay: Int,
       quantity: Int
   ): Task[Unit] =

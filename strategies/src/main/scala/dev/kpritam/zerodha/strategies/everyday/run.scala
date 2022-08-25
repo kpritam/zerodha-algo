@@ -9,8 +9,13 @@ import java.util.Calendar
 val run =
   for
     f1 <- EverydayStrategy
-            .sellBuyModifyOrder(nfo, nifty, thursday, quantity)
-            .catchAndLog("Strategy failed")
+            .sellBuyModifyOrder(nfo, nifty, priceNifty, thursday, quantityNifty)
+            .catchAndLog("[NIFTY] Strategy failed")
+            .zipPar(
+              EverydayStrategy
+                .sellBuyModifyOrder(nfo, bankNifty, priceBankNifty, thursday, quantityBankNifty)
+                .catchAndLog("[BANK NIFTY] Strategy failed")
+            )
             .schedule(onceDay(9, 25))
             .fork
     f2 <- EverydayStrategy.modifyPendingOrders
@@ -27,8 +32,3 @@ val run =
             .fork
     _  <- f1.zip(f2).zip(f3).zip(f4).await
   yield ()
-
-val runTest =
-  EverydayStrategy
-    .sellBuyModifyOrder(nfo, nifty, thursday, quantity)
-    .catchAndLog("Strategy failed")

@@ -7,6 +7,7 @@ trait EverydayStrategy:
   def sellBuyModifyOrder(
       exchange: Exchange,
       name: String,
+      price: Double,
       expiryDay: Int,
       quantity: Int
   ): Task[Unit]
@@ -19,10 +20,13 @@ object EverydayStrategy:
   def sellBuyModifyOrder(
       exchange: Exchange,
       name: String,
+      price: Double,
       expiryDay: Int,
       quantity: Int
   ): RIO[EverydayStrategy, Unit] =
-    ZIO.serviceWithZIO[EverydayStrategy](_.sellBuyModifyOrder(exchange, name, expiryDay, quantity))
+    ZIO.serviceWithZIO[EverydayStrategy](
+      _.sellBuyModifyOrder(exchange, name, price, expiryDay, quantity)
+    )
 
   def modifyPendingOrders: RIO[EverydayStrategy, List[String]] =
     ZIO.serviceWithZIO[EverydayStrategy](_.modifyPendingOrders)

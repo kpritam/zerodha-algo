@@ -7,9 +7,12 @@ import dev.kpritam.zerodha.time.nextWeekday
 
 import java.util.Calendar
 
-private val price    = 12
-private val regular  = "regular"
-private val nfo      = Exchange("NFO")
-private val nifty    = "NIFTY"
-private val thursday = Calendar.THURSDAY
-private val quantity = 750
+private val priceNifty        = 12
+private val priceBankNifty    = 25
+private val regular           = "regular"
+private val nfo               = Exchange("NFO")
+private val nifty             = "NIFTY"
+private val bankNifty         = "BANKNIFTY"
+private val thursday          = Calendar.THURSDAY
+private val quantityNifty     = 500
+private val quantityBankNifty = 100
