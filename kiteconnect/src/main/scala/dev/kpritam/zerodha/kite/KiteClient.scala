@@ -1,8 +1,7 @@
 package dev.kpritam.zerodha.kite
 
 import com.zerodhatech.kiteconnect.KiteConnect
-import com.zerodhatech.models.LTPQuote
-import com.zerodhatech.models.Quote
+import com.zerodhatech.models.{HistoricalData, LTPQuote, OHLCQuote, Quote}
 import dev.kpritam.zerodha.kite.login.KiteLogin
 import dev.kpritam.zerodha.kite.models.*
 import zio.*
@@ -23,6 +22,15 @@ trait KiteClient:
   def getLTP(request: QuoteRequest): Task[LTPQuote]
   def getLTPs(request: List[QuoteRequest]): Task[Map[QuoteRequest, LTPQuote]]
 
+  def getOHLC(request: QuoteRequest): Task[OHLCQuote]
+  def getOHLCs(request: List[QuoteRequest]): Task[Map[QuoteRequest, OHLCQuote]]
+
+  def getHistoricalData(
+      from: Date,
+      to: Date,
+      token: String,
+      interval: String
+  ): Task[HistoricalData]
   def modifyOrder(orderId: String, orderReq: OrderRequest, variety: String): Task[String]
   def placeOrder(orderReq: OrderRequest, variety: String): Task[String]
   def getOrders: Task[List[Order]]
@@ -71,6 +79,32 @@ case class KiteClientLive(kiteConnect: KiteConnect, login: KiteLogin) extends Ki
       map       <- attemptBlockingWithRetry(kiteConnect.getLTP(request.map(_.instrument).toArray).asScala)
       ltpQuotes <- mkQuoteRequestMap(map.toMap)
     yield ltpQuotes
+
+  def getOHLC(request: QuoteRequest): Task[OHLCQuote] =
+    for
+      ltpQuotes <- getOHLCs(List(request))
+      quote     <- QuoteRequest.from(request.instrument)
+      ohlcQuote <-
+        ZIO.getOrFailWith(KiteError.QuoteNoteFound(request.instrument))(ltpQuotes.get(quote))
+    yield ohlcQuote
+
+  def getHistoricalData(
+      from: Date,
+      to: Date,
+      token: String,
+      interval: String
+  ): Task[HistoricalData] =
+    attemptBlockingWithRetry(
+      kiteConnect.getHistoricalData(from, to, token, interval, false, false)
+    )
+
+  def getOHLCs(request: List[QuoteRequest]): Task[Map[QuoteRequest, OHLCQuote]] =
+    for
+      map        <- attemptBlockingWithRetry(
+                      kiteConnect.getOHLC(request.map(_.instrument).toArray).asScala
+                    )
+      ohlcQuotes <- mkQuoteRequestMap(map.toMap)
+    yield ohlcQuotes
 
   def placeOrder(orderReq: OrderRequest, variety: String): Task[String] =
     attemptBlockingWithRetry(kiteConnect.placeOrder(orderReq.toZerodha, variety).orderId)
@@ -131,6 +165,20 @@ object KiteClient:
 
   def getLTPs(request: List[QuoteRequest]): RIO[KiteClient, Map[QuoteRequest, LTPQuote]] =
     ZIO.serviceWithZIO[KiteClient](_.getLTPs(request))
+
+  def getOHLC(request: QuoteRequest): RIO[KiteClient, OHLCQuote] =
+    ZIO.serviceWithZIO[KiteClient](_.getOHLC(request))
+
+  def getOHLCs(request: List[QuoteRequest]): RIO[KiteClient, Map[QuoteRequest, OHLCQuote]] =
+    ZIO.serviceWithZIO[KiteClient](_.getOHLCs(request))
+
+  def getHistoricalData(
+      from: Date,
+      to: Date,
+      token: String,
+      interval: String
+  ): RIO[KiteClient, HistoricalData] =
+    ZIO.serviceWithZIO[KiteClient](_.getHistoricalData(from, to, token, interval))
 
   def placeOrder(orderReq: OrderRequest, variety: String): RIO[KiteClient, String] =
     ZIO.serviceWithZIO[KiteClient](_.placeOrder(orderReq, variety))
