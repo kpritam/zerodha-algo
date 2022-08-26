@@ -1,7 +1,10 @@
 package dev.kpritam.zerodha.kite
 
 import com.zerodhatech.kiteconnect.KiteConnect
-import com.zerodhatech.models.{HistoricalData, LTPQuote, OHLCQuote, Quote}
+import com.zerodhatech.models.HistoricalData
+import com.zerodhatech.models.LTPQuote
+import com.zerodhatech.models.OHLCQuote
+import com.zerodhatech.models.Quote
 import dev.kpritam.zerodha.kite.login.KiteLogin
 import dev.kpritam.zerodha.kite.models.*
 import zio.*

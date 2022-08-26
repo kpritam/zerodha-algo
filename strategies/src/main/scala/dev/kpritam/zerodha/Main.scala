@@ -1,8 +1,13 @@
 package dev.kpritam.zerodha
 
-import dev.kpritam.zerodha.kite.{KiteClient, KiteConfig}
-import dev.kpritam.zerodha.kite.login.{KiteLogin, KiteLoginLive, Totp}
-import dev.kpritam.zerodha.kite.models.{Exchange, QuoteRequest, TradingSymbol}
+import dev.kpritam.zerodha.kite.KiteClient
+import dev.kpritam.zerodha.kite.KiteConfig
+import dev.kpritam.zerodha.kite.login.KiteLogin
+import dev.kpritam.zerodha.kite.login.KiteLoginLive
+import dev.kpritam.zerodha.kite.login.Totp
+import dev.kpritam.zerodha.kite.models.Exchange
+import dev.kpritam.zerodha.kite.models.QuoteRequest
+import dev.kpritam.zerodha.kite.models.TradingSymbol
 import zio.*
 
 import java.time.Instant

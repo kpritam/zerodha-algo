@@ -9,7 +9,7 @@ import dev.kpritam.zerodha.db.QuillCtx
 import dev.kpritam.zerodha.kite.KiteClient
 import dev.kpritam.zerodha.kite.KiteConfig
 import dev.kpritam.zerodha.kite.KiteServiceLive
-import dev.kpritam.zerodha.kite.KiteTickerClient
+import dev.kpritam.zerodha.kite.KiteTickerLive
 import dev.kpritam.zerodha.kite.login.KiteLoginLive
 import dev.kpritam.zerodha.kite.login.Totp
 import dev.kpritam.zerodha.kite.models.Exchange
@@ -37,7 +37,6 @@ object App extends ZIOAppDefault:
     (for
       _ <- ZIO.logInfo("Starting app ...")
       _ <- Migrations.migrate
-      _ <- KiteTickerClient.init
       _ <- seedInstrumentsIfNeeded
       _ <- strategies.everyday.run
     yield ())
@@ -50,7 +49,7 @@ object App extends ZIOAppDefault:
         KiteConfig.live,
         KiteLoginLive.layer,
         KiteClient.live,
-        KiteTickerClient.live,
+        KiteTickerLive.layer,
         // service
         KiteServiceLive.layer,
         // db
