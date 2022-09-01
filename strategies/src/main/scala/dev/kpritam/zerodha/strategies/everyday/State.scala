@@ -20,6 +20,16 @@ case class State(
   def updateCeSL(o: Order): State = copy(ceSLOrder = Some(o))
   def updatePeSL(o: Order): State = copy(peSLOrder = Some(o))
 
+  def debug: String =
+    "[ " +
+      orderStr("CE Order", ceOrder) + ", " +
+      orderStr("PE Order", peOrder) + ", " +
+      orderStr("CE SL Order", ceSLOrder) + ", " +
+      orderStr("PE SL Order", peSLOrder) + ", " +
+      " ]"
+
+  private def orderStr(name: String, order: Option[Order]) = s"$name: (${order.fold("")(_.debug)})"
+
 object State:
   def make: UIO[Ref[State]] = Ref.make(State())
 

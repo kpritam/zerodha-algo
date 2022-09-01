@@ -31,8 +31,8 @@ case class KiteServiceLive(
     for
       i       <- instruments.all.map(_.filter(_.eq(request)))
       updated <- getLTPs(i)
-      ce      <- findInstrument(updated.filter(_.isCE), minBy)
-      pe      <- findInstrument(updated.filter(_.isPE), i => math.abs(i.lastPrice - ce.lastPrice))
+      pe      <- findInstrument(updated.filter(_.isPE), minBy)
+      ce      <- findInstrument(updated.filter(_.isCE), i => math.abs(i.lastPrice - pe.lastPrice))
     yield CEPEInstrument(ce, pe)
 
   def placeOrder(request: OrderRequest, variety: String): Task[Order] =

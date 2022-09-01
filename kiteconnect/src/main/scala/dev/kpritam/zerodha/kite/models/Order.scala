@@ -37,6 +37,8 @@ case class Order(
 ):
   def completed: Boolean = status != null && status.equalsIgnoreCase("COMPLETE")
 
+  def debug = s"ID: $orderId, Trading Symbol: $tradingSymbol"
+
 object Order:
   def from(o: ZOrder): Order =
     Order(

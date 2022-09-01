@@ -64,6 +64,8 @@ case class OrderRequest(
       validityTtl = validityTTL
     )
 
+  def debug: String = s"Trading Symbol: $tradingSymbol"
+
 object OrderRequest:
   def from(o: Order): OrderRequest =
     OrderRequest(

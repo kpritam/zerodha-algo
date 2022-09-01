@@ -96,9 +96,9 @@ case class EverydayStrategyLive(
       .collectZIO {
         case o if o.completed =>
           for
-            _ <- ZIO.logDebug(s"[1] Order completed: $o")
+            _ <- ZIO.logDebug(s"[1] Order completed: ID: ${o.debug}")
             _ <- ZIO.sleep(1.second)
-            s <- state.get.tap(s => ZIO.logDebug("[2] Current State: " + s))
+            s <- state.get.tap(s => ZIO.logDebug("[2] Current State: " + s.debug))
             _ <- ZIO.whenCase(Some(o.orderId)) {
                    case s.ceOrderId => placeSLOrder(orderReq, o, state.updateCeSL).ignore
                    case s.peOrderId => placeSLOrder(orderReq, o, state.updatePeSL).ignore
@@ -110,25 +110,26 @@ case class EverydayStrategyLive(
                  }
           yield ()
       }
-      .take(4)
 
   private def placeSLOrder(orderReq: OrderRequest, order: Order, update: Order => UIO[Unit]) =
     (for
-      _          <- ZIO.logDebug(s"[PlaceSLOrder] Placing order: $orderReq")
+      _          <- ZIO.logDebug(s"[PlaceSLOrder] Placing order: ${orderReq.debug}")
       quote      <- kiteClient.getQuote(QuoteRequest.from(order))
       (tp, price) = triggerPriceAndPrice(order.averagePrice, quote)
       res        <-
         kiteService
           .placeOrder(orderReq.toSLBuy(tp, price, order.tradingSymbol), regular)
           .tap(update)
-      _          <- ZIO.logDebug(s"[PlaceSLOrder] Order placed: $res")
+      _          <- ZIO.logDebug(s"[PlaceSLOrder] Order placed: ${res.debug}")
     yield res).tapError(e =>
-      ZIO.logError(s"[PlaceSLOrder] Failed to place order, reason: ${e.getMessage}")
+      ZIO.logError(
+        s"[PlaceSLOrder] Failed to place order for request: ${orderReq.debug}, reason: ${e.getMessage}"
+      )
     )
 
   private def modifyOrder(orderReq: OrderRequest, order: Order) =
     (for
-      _     <- ZIO.logDebug(s"Modifying order: $order")
+      _     <- ZIO.logDebug(s"Modifying order: ${order.debug}")
       quote <- kiteClient.getQuote(QuoteRequest.from(order))
       _     <- ZIO
                  .fail(LastPriceExceeds(quote.lastPrice, order.price))
@@ -137,11 +138,11 @@ case class EverydayStrategyLive(
       (tp, price) = triggerPriceAndPrice(quote.lastPrice, quote)
       modifyReq   = orderReq.toSLBuy(tp, price, order.tradingSymbol)
       res        <- kiteClient.modifyOrder(order.orderId, modifyReq, regular)
-      _          <- ZIO.logDebug(s"Order modified: $res")
+      _          <- ZIO.logDebug(s"Order modified for request: ${orderReq.debug}, response: $res")
     yield res)
       .tapError(e =>
         ZIO.logError(
-          s"Order modification failed: TradingSymbol: ${orderReq.tradingSymbol}, reason : ${e.getMessage}"
+          s"Order modification failed for request: ${orderReq.debug}, reason : ${e.getMessage}"
         )
       )
 
