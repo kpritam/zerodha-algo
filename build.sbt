@@ -62,3 +62,10 @@ lazy val kiteconnect = project
       ZIO.testSbt
     )
   )
+
+lazy val commons = project.settings(
+  libraryDependencies ++= Seq(
+    ZIO.core,
+    ZIO.test
+  )
+)

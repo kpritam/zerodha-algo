@@ -96,9 +96,9 @@ case class EverydayStrategyLive(
       .collectZIO {
         case o if o.completed =>
           for
-            _ <- ZIO.logDebug(s"[1] Order completed: ID: ${o.debug}")
+            _ <- ZIO.logDebug(s"[1] Order completed: ${o.debug}")
             _ <- ZIO.sleep(1.second)
-            s <- state.get.tap(s => ZIO.logDebug("[2] Current State: " + s.debug))
+            s <- state.get.tap(s => ZIO.logDebug(s"[2] Current State: ${s.debug}"))
             _ <- ZIO.whenCase(Some(o.orderId)) {
                    case s.ceOrderId => placeSLOrder(orderReq, o, state.updateCeSL).ignore
                    case s.peOrderId => placeSLOrder(orderReq, o, state.updatePeSL).ignore
@@ -113,14 +113,13 @@ case class EverydayStrategyLive(
 
   private def placeSLOrder(orderReq: OrderRequest, order: Order, update: Order => UIO[Unit]) =
     (for
-      _          <- ZIO.logDebug(s"[PlaceSLOrder] Placing order: ${orderReq.debug}")
-      quote      <- kiteClient.getQuote(QuoteRequest.from(order))
-      (tp, price) = triggerPriceAndPrice(order.averagePrice, quote)
-      res        <-
-        kiteService
-          .placeOrder(orderReq.toSLBuy(tp, price, order.tradingSymbol), regular)
-          .tap(update)
-      _          <- ZIO.logDebug(s"[PlaceSLOrder] Order placed: ${res.debug}")
+      _             <- ZIO.logDebug(s"[PlaceSLOrder] Getting quote: ${order.tradingSymbol}")
+      quote         <- kiteClient.getQuote(QuoteRequest.from(order))
+      (tp, price)    = triggerPriceAndPrice(order.averagePrice, quote)
+      updatedRequest = orderReq.toSLBuy(tp, price, order.tradingSymbol)
+      _             <- ZIO.logDebug(s"[PlaceSLOrder] Placing order: ${updatedRequest.debug}")
+      res           <- kiteService.placeOrder(updatedRequest, regular).tap(update)
+      _             <- ZIO.logDebug(s"[PlaceSLOrder] Order placed: ${res.debug}")
     yield res).tapError(e =>
       ZIO.logError(
         s"[PlaceSLOrder] Failed to place order for request: ${orderReq.debug}, reason: ${e.getMessage}"
@@ -148,16 +147,16 @@ case class EverydayStrategyLive(
 
   private def closeOrder(orderReq: OrderRequest, order: Order) =
     for
-      _   <- ZIO.logDebug(s"Closing order: $order")
+      _   <- ZIO.logDebug(s"Closing order: ${order.debug}")
       res <- kiteClient.modifyOrder(order.orderId, orderReq, regular)
       _   <- ZIO.logDebug(s"Order closed: $res")
     yield res
 
   private def placeOrder(orderReq: OrderRequest, variety: String, update: Order => UIO[Unit]) =
     for
-      _   <- ZIO.logDebug(s"Placing order: $orderReq")
+      _   <- ZIO.logDebug(s"Placing order: ${orderReq.debug}")
       res <- kiteService.placeOrder(orderReq, variety).tap(update)
-      _   <- ZIO.logDebug(s"Order placed: $res")
+      _   <- ZIO.logDebug(s"Order placed: ${res.debug}")
     yield res
 
 object EverydayStrategyLive:

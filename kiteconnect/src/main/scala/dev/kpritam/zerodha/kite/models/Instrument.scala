@@ -22,7 +22,7 @@ case class Instrument(
     strike: Double,
     lotSize: Int,
     expiry: LocalDate,
-    createdAt: LocalDateTime = LocalDateTime.now(indiaZone)
+    createdAt: LocalDateTime = dateTimeNow()
 ):
   def isCE: Boolean = instrumentType == "CE"
   def isPE: Boolean = instrumentType == "PE"
@@ -47,7 +47,7 @@ object Instrument:
       instrument.exchange,
       instrument.strike.toDouble,
       instrument.lot_size,
-      if instrument.expiry == null then LocalDate.now(indiaZone)
+      if instrument.expiry == null then dateNow()
       else instrument.expiry.toIndiaLocalDate
     )
 

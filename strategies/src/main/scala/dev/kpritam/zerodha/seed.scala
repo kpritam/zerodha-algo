@@ -3,7 +3,6 @@ package dev.kpritam.zerodha
 import dev.kpritam.zerodha.db.Instruments
 import dev.kpritam.zerodha.kite.KiteService
 import dev.kpritam.zerodha.kite.models.Instrument
-import dev.kpritam.zerodha.kite.time.indiaZone
 import dev.kpritam.zerodha.models.InstrumentsNotFound
 import dev.kpritam.zerodha.time.nextWeekday
 import zio.*

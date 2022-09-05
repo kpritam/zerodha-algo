@@ -25,8 +25,12 @@ object Main extends ZIOAppDefault:
                   QuoteRequest.Instrument(TradingSymbol("NIFTY 50"), Exchange("NSE")).instrument,
                   "15m"
                 )
-      _      <- Console.printLine(quotes)
-      _      <- Console.printLine(hd)
+      _      <- Console.printLine("Last Price: " + quotes.lastPrice)
+      _      <- Console.printLine("Low: " + quotes.ohlc.low)
+      _      <- Console.printLine("High: " + quotes.ohlc.high)
+      _      <- Console.printLine("Open: " + quotes.ohlc.open)
+      _      <- Console.printLine("Close: " + quotes.ohlc.close)
+//      _      <- Console.printLine(hd)
     yield ())
       .provide(
         Totp.live,
